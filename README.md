@@ -13,9 +13,8 @@
     2. **DINOv2-Large** (Meta, 2023; 300 M, LVD-142M self-supervised)
     3. **ResNet-152 + DeepLabV3+** (ImageNet) — CNN baseline (no LoRA, full FT)
 - **Data**: 9,564 train / 2,549 train_rare (×5 repeat) / 2,124 val
-  (`val_diuid_7.json`, 7 WTGs) / 3,083 test (`test_diuid_10.json`, 10 WTGs).
+  ( 7 WTGs) / 3,083 test.
   All splits WTG-disjoint (per-WTG leak fixed in `windblade_merged.py`).
-- **Hardware**: 1× A100 80 GB PCIe.
 
 ---
 
