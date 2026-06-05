@@ -1,0 +1,1166 @@
+{
+  "last_updated": "2026-06-05 15:00 KST",
+  "class_mapping": {
+    "0": "background",
+    "1": "la_exposure",
+    "2": "la_damage",
+    "3": "la_crack",
+    "4": "la_open",
+    "5": "bond_crack",
+    "6": "bond_open",
+    "7": "receptor_lightning",
+    "8": "receptor_damage"
+  },
+  "customer_target": "micro R \u2265 85%, micro P \u2265 50%",
+  "experiments": [
+    {
+      "id": "v12",
+      "name": "v12 \u2014 team baseline (leak-free)",
+      "category": "model",
+      "status": "done",
+      "tags": [
+        "team",
+        "all-classes"
+      ],
+      "purpose": "Leak-free team baseline. The team's original train.json had 912 images that overlapped with val_diuid_7 and test_diuid_10. v12 trains on a deduplicated train_no_leak.json (9,564 imgs) and evaluates on the same team val/test as v8 for direct apples-to-apples comparison.",
+      "training_data": {
+        "source": "team train_no_leak.json",
+        "train_size": 9564,
+        "val_size": 2124,
+        "test_size": 3083,
+        "test_set": "test_diuid_10.json",
+        "labeler": "team",
+        "scope": "all 8 defect classes"
+      },
+      "recipe": {
+        "loss": "CWCE + Dice",
+        "backbone": "SAM 3.1 LoRA r=8 (~9.4M trainable / 2.06%)",
+        "iters": "30,000 DDP-2",
+        "tiles": "--n-bg=3 (3 BG tiles per image)",
+        "warm_start": "v1 iter_30000.pth"
+      },
+      "results": [
+        {
+          "variant": "no-TTA baseline",
+          "mIoU": 0.331,
+          "R": 88.89,
+          "P": 35.86,
+          "hits_target": false
+        },
+        {
+          "variant": "no-TTA + T*",
+          "mIoU": 0.3334325714726244,
+          "R": 81.5,
+          "P": 44.82,
+          "hits_target": false
+        },
+        {
+          "variant": "full-TTA baseline",
+          "mIoU": 0.343,
+          "R": 86.92,
+          "P": 44.58,
+          "hits_target": false
+        },
+        {
+          "variant": "full-TTA + T*",
+          "mIoU": 0.3461764162816404,
+          "R": 83.06,
+          "P": 51.69,
+          "hits_target": false
+        }
+      ],
+      "per_class_full_tta_T": [
+        {
+          "class": "la_exposure",
+          "TP": 859,
+          "FP": 590,
+          "FN": 59,
+          "R": 93.6,
+          "P": 59.3
+        },
+        {
+          "class": "la_damage",
+          "TP": 117,
+          "FP": 37,
+          "FN": 8,
+          "R": 93.6,
+          "P": 76.0
+        },
+        {
+          "class": "la_crack",
+          "TP": 15,
+          "FP": 6,
+          "FN": 57,
+          "R": 20.8,
+          "P": 71.4
+        },
+        {
+          "class": "la_open",
+          "TP": 0,
+          "FP": 0,
+          "FN": 0,
+          "R": null,
+          "P": null
+        },
+        {
+          "class": "bond_crack",
+          "TP": 22,
+          "FP": 8,
+          "FN": 50,
+          "R": 30.6,
+          "P": 73.3
+        },
+        {
+          "class": "bond_open",
+          "TP": 6,
+          "FP": 90,
+          "FN": 6,
+          "R": 50.0,
+          "P": 6.2
+        },
+        {
+          "class": "receptor_lightning",
+          "TP": 68,
+          "FP": 54,
+          "FN": 45,
+          "R": 60.2,
+          "P": 55.7
+        },
+        {
+          "class": "receptor_damage",
+          "TP": 83,
+          "FP": 40,
+          "FN": 81,
+          "R": 50.6,
+          "P": 67.5
+        }
+      ]
+    },
+    {
+      "id": "v13",
+      "name": "v13 \u2014 overseas-only",
+      "category": "model",
+      "status": "done",
+      "tags": [
+        "overseas",
+        "all-classes"
+      ],
+      "purpose": "Same v8 recipe trained only on overseas turbine-split data. Tests how the model performs on the overseas distribution when trained natively on it.",
+      "training_data": {
+        "source": "overseas_only_train_merged.json",
+        "train_size": 6559,
+        "val_size": 867,
+        "test_size": 720,
+        "test_set": "overseas_only_test.json",
+        "labeler": "overseas (lab + trained)",
+        "scope": "all 8 defect classes (in practice mostly La_Exposure-heavy)"
+      },
+      "recipe": {
+        "loss": "CWCE + Dice",
+        "backbone": "SAM 3.1 LoRA r=8",
+        "iters": "30,000 DDP-2",
+        "tiles": "--n-bg=3",
+        "warm_start": "v1 iter_30000.pth"
+      },
+      "results": [
+        {
+          "variant": "no-TTA baseline",
+          "mIoU": 0.381,
+          "R": 92.51,
+          "P": 56.2,
+          "hits_target": true
+        },
+        {
+          "variant": "no-TTA + T*",
+          "mIoU": 0.3801361707008978,
+          "R": 90.6,
+          "P": 60.49,
+          "hits_target": true
+        },
+        {
+          "variant": "full-TTA baseline",
+          "mIoU": 0.392,
+          "R": 91.34,
+          "P": 65.47,
+          "hits_target": true
+        },
+        {
+          "variant": "full-TTA + T*",
+          "mIoU": 0.39217630746268306,
+          "R": 91.34,
+          "P": 66.31,
+          "hits_target": true
+        }
+      ],
+      "per_class_full_tta_T": [
+        {
+          "class": "la_exposure",
+          "TP": 293,
+          "FP": 94,
+          "FN": 38,
+          "R": 88.5,
+          "P": 75.7
+        },
+        {
+          "class": "la_damage",
+          "TP": 0,
+          "FP": 34,
+          "FN": 0,
+          "R": null,
+          "P": 0.0
+        },
+        {
+          "class": "la_crack",
+          "TP": 123,
+          "FP": 92,
+          "FN": 29,
+          "R": 80.9,
+          "P": 57.2
+        },
+        {
+          "class": "la_open",
+          "TP": 0,
+          "FP": 0,
+          "FN": 0,
+          "R": null,
+          "P": null
+        },
+        {
+          "class": "bond_crack",
+          "TP": 90,
+          "FP": 71,
+          "FN": 50,
+          "R": 64.3,
+          "P": 55.9
+        },
+        {
+          "class": "bond_open",
+          "TP": 1,
+          "FP": 8,
+          "FN": 0,
+          "R": 100,
+          "P": 11.1
+        },
+        {
+          "class": "receptor_lightning",
+          "TP": 51,
+          "FP": 21,
+          "FN": 3,
+          "R": 94.4,
+          "P": 70.8
+        },
+        {
+          "class": "receptor_damage",
+          "TP": 0,
+          "FP": 29,
+          "FN": 3,
+          "R": 0.0,
+          "P": 0.0
+        }
+      ]
+    },
+    {
+      "id": "v15",
+      "name": "v15 \u2014 combined team + overseas",
+      "category": "model",
+      "status": "done",
+      "tags": [
+        "combined",
+        "all-classes"
+      ],
+      "purpose": "v8 recipe trained on combined team_no_leak + overseas merged. Evaluated separately on each test set.",
+      "training_data": {
+        "source": "team train_no_leak (9,564) + overseas merged (6,559) = 16,123",
+        "test_sets": [
+          "team test_diuid_10 (3083)",
+          "overseas_only_test (720)"
+        ],
+        "labeler": "team + overseas",
+        "scope": "all 8 defect classes"
+      },
+      "recipe": {
+        "loss": "CWCE + Dice",
+        "backbone": "SAM 3.1 LoRA r=8",
+        "iters": "30,000 DDP-2",
+        "tiles": "--n-bg=3 (49,398 team + 32,111 overseas tiles/epoch)",
+        "warm_start": "v1"
+      },
+      "results": [
+        {
+          "variant": "team test, no-TTA baseline",
+          "mIoU": 0.296,
+          "R": 87.06,
+          "P": 33.33,
+          "hits_target": false
+        },
+        {
+          "variant": "team test, no-TTA + T*",
+          "mIoU": 0.296426438134046,
+          "R": 80.89,
+          "P": 44.54,
+          "hits_target": false
+        },
+        {
+          "variant": "team test, full-TTA baseline",
+          "mIoU": 0.304,
+          "R": 85.57,
+          "P": 40.94,
+          "hits_target": false
+        },
+        {
+          "variant": "team test, full-TTA + T*",
+          "mIoU": 0.3038702441909425,
+          "R": 81.1,
+          "P": 51.11,
+          "hits_target": false
+        },
+        {
+          "variant": "overseas test, no-TTA baseline",
+          "mIoU": 0.304,
+          "R": 90.16,
+          "P": 45.89,
+          "hits_target": false
+        },
+        {
+          "variant": "overseas test, no-TTA + T*",
+          "mIoU": 0.30338165298686953,
+          "R": 87.37,
+          "P": 54.74,
+          "hits_target": true
+        },
+        {
+          "variant": "overseas test, full-TTA baseline",
+          "mIoU": 0.325,
+          "R": 87.96,
+          "P": 57.16,
+          "hits_target": true
+        },
+        {
+          "variant": "overseas test, full-TTA + T*",
+          "mIoU": 0.3251941311184795,
+          "R": 87.96,
+          "P": 59.37,
+          "hits_target": true
+        },
+        {
+          "variant": "COMBINED, full-TTA + T*",
+          "mIoU": null,
+          "R": 83.26,
+          "P": 53.01,
+          "hits_target": false
+        }
+      ]
+    },
+    {
+      "id": "v16",
+      "name": "v16 \u2014 overseas lab Cracks specialist",
+      "category": "model",
+      "status": "done",
+      "tags": [
+        "overseas",
+        "cracks-only",
+        "lab-labelers"
+      ],
+      "purpose": "Trained only on overseas lab-labeler images (Cracks-only scope by labeler task type). Tests how a Cracks specialist trained on lab labels performs on its native distribution.",
+      "training_data": {
+        "source": "overseas lab labelers (2,993 train / 345 val / 303 test)",
+        "labeler": "overseas lab",
+        "scope": "La_Crack + Bond_Crack only"
+      },
+      "recipe": {
+        "loss": "CWCE + Dice",
+        "backbone": "SAM 3.1 LoRA r=8",
+        "iters": "30,000 DDP-2",
+        "tiles": "--n-bg=3"
+      },
+      "results": [
+        {
+          "variant": "no-TTA baseline",
+          "mIoU": 0.581,
+          "R": 92.47,
+          "P": 72.58,
+          "hits_target": true
+        },
+        {
+          "variant": "no-TTA + T*",
+          "mIoU": 0.5805769529204786,
+          "R": 92.47,
+          "P": 72.58,
+          "hits_target": true
+        },
+        {
+          "variant": "full-TTA baseline",
+          "mIoU": 0.593,
+          "R": 88.01,
+          "P": 73.64,
+          "hits_target": true
+        },
+        {
+          "variant": "full-TTA + T*",
+          "mIoU": 0.5933787025291458,
+          "R": 88.01,
+          "P": 73.64,
+          "hits_target": true
+        }
+      ]
+    },
+    {
+      "id": "v17",
+      "name": "v17 \u2014 combined + 2\u00d7 BG tile sampling",
+      "category": "model",
+      "status": "done",
+      "tags": [
+        "combined",
+        "ablation-2xBG"
+      ],
+      "purpose": "v15 architecture but BG-tile sampling doubled (--n-bg=6 vs v15's 3). Tests whether more clean-blade exposure during training reduces FPs.",
+      "training_data": {
+        "source": "Same as v15 (team_no_leak + overseas merged)",
+        "test_sets": [
+          "team test_diuid_10",
+          "overseas_only_test"
+        ],
+        "labeler": "team + overseas",
+        "scope": "all 8 defect classes"
+      },
+      "recipe": {
+        "loss": "CWCE + Dice",
+        "backbone": "SAM 3.1 LoRA r=8",
+        "iters": "30,000 DDP-2",
+        "tiles": "--n-bg=6 (46,616 defect + 60,067 BG tiles/epoch; BG share 56% of batch)",
+        "blade_mask_fix": "patched load_blade_mask for overseas paths"
+      },
+      "results": [
+        {
+          "variant": "team test, no-TTA baseline",
+          "mIoU": 0.34,
+          "R": 85.7,
+          "P": 39.88,
+          "hits_target": false
+        },
+        {
+          "variant": "team test, no-TTA + T*",
+          "mIoU": 0.3407178862764466,
+          "R": 80.42,
+          "P": 52.08,
+          "hits_target": false
+        },
+        {
+          "variant": "team test, full-TTA baseline",
+          "mIoU": 0.348,
+          "R": 84.01,
+          "P": 48.4,
+          "hits_target": false
+        },
+        {
+          "variant": "team test, full-TTA + T*",
+          "mIoU": 0.3480971644082439,
+          "R": 79.27,
+          "P": 58.65,
+          "hits_target": false
+        },
+        {
+          "variant": "overseas test, no-TTA baseline",
+          "mIoU": 0.336,
+          "R": 84.88,
+          "P": 54.17,
+          "hits_target": false
+        },
+        {
+          "variant": "overseas test, no-TTA + T*",
+          "mIoU": 0.335720736545507,
+          "R": 84.58,
+          "P": 59.26,
+          "hits_target": false
+        },
+        {
+          "variant": "overseas test, full-TTA baseline",
+          "mIoU": 0.347,
+          "R": 82.09,
+          "P": 59.59,
+          "hits_target": false
+        },
+        {
+          "variant": "overseas test, full-TTA + T*",
+          "mIoU": 0.34680911853871277,
+          "R": 81.94,
+          "P": 63.92,
+          "hits_target": false
+        },
+        {
+          "variant": "COMBINED, full-TTA + T*",
+          "mIoU": null,
+          "R": 80.11,
+          "P": 59.55,
+          "hits_target": false
+        }
+      ]
+    },
+    {
+      "id": "v19",
+      "name": "v19 \u2014 team Cracks remasked (apples-to-apples vs v16)",
+      "category": "model",
+      "status": "done",
+      "tags": [
+        "team",
+        "cracks-only"
+      ],
+      "purpose": "Sample team images containing Cracks, REMASK to keep only La_Crack + Bond_Crack pixels, match v16's class ratio. Isolates labeler-style effect at constrained scope.",
+      "training_data": {
+        "source": "team Crack-containing images (remasked)",
+        "train_size": 531,
+        "val_size": 44,
+        "test_size": 60,
+        "labeler": "team",
+        "scope": "La_Crack + Bond_Crack only (other classes zeroed in masks)"
+      },
+      "recipe": {
+        "loss": "CWCE + Dice",
+        "iters": "30,000 DDP-2",
+        "tiles": "--n-bg=3"
+      },
+      "results": [
+        {
+          "variant": "no-TTA baseline",
+          "mIoU": 0.528,
+          "R": 78.33,
+          "P": 69.12,
+          "hits_target": false
+        },
+        {
+          "variant": "no-TTA + T*",
+          "mIoU": 0.5282528016658482,
+          "R": 78.33,
+          "P": 69.12,
+          "hits_target": false
+        }
+      ],
+      "per_class_no_tta_T": [
+        {
+          "class": "la_crack",
+          "TP": 29,
+          "FP": 12,
+          "FN": 9,
+          "R": 76.3,
+          "P": 70.7
+        },
+        {
+          "class": "bond_crack",
+          "TP": 18,
+          "FP": 9,
+          "FN": 4,
+          "R": 81.8,
+          "P": 66.7
+        }
+      ]
+    },
+    {
+      "id": "v20",
+      "name": "v20 \u2014 combined model + auxiliary defect-classification head",
+      "category": "model",
+      "status": "done",
+      "tags": [
+        "combined",
+        "multi-task"
+      ],
+      "purpose": "v17 architecture + a new tile-level binary 'is this tile defect?' classification head, jointly trained with seg head. Aux loss is 0.1\u00d7 BCE on the aux logit. Intended for inference-time gating (Mode A soft multiply or Mode B hard gate) to reduce FPs on empty tiles.",
+      "training_data": {
+        "source": "Same as v17",
+        "labeler": "team + overseas",
+        "scope": "all 8 defect classes"
+      },
+      "recipe": {
+        "loss": "CWCE + Dice + 0.1 \u00d7 BCE(aux_logit, has_any_defect_pixel)",
+        "head": "SegformerHeadWithAux (existing seg branch + new aux branch: GAP \u2192 MLP \u2192 1 logit)",
+        "iters": "30,000 DDP-2",
+        "warm_start": "v17 iter_30000.pth"
+      },
+      "results": [
+        {
+          "variant": "team test, no-TTA baseline",
+          "mIoU": 0.301,
+          "R": 86.04,
+          "P": 39.82,
+          "hits_target": false
+        },
+        {
+          "variant": "team test, no-TTA + T*",
+          "mIoU": 0.3010522432148645,
+          "R": 83.74,
+          "P": 48.47,
+          "hits_target": false
+        },
+        {
+          "variant": "overseas test, no-TTA baseline",
+          "mIoU": 0.312,
+          "R": 87.52,
+          "P": 57.14,
+          "hits_target": true
+        },
+        {
+          "variant": "overseas test, no-TTA + T*",
+          "mIoU": 0.311845440172937,
+          "R": 87.37,
+          "P": 59.8,
+          "hits_target": true
+        },
+        {
+          "variant": "COMBINED, no-TTA baseline",
+          "mIoU": null,
+          "R": 86.51,
+          "P": 44.09,
+          "hits_target": false
+        },
+        {
+          "variant": "COMBINED, no-TTA + T*",
+          "mIoU": null,
+          "R": 84.89,
+          "P": 50.69,
+          "hits_target": true
+        }
+      ],
+      "pending": [
+        "full-TTA + T* not run",
+        "aux-gated inference (Mode A soft / Mode B hard) not run \u2014 would use the aux head currently silently discarded"
+      ]
+    },
+    {
+      "id": "v21",
+      "name": "v21 \u2014 EfficientNet-B0 tile classifier (cascade stage 1)",
+      "category": "model",
+      "status": "done",
+      "tags": [
+        "cascade",
+        "stage-1",
+        "efficientnet"
+      ],
+      "purpose": "Standalone tile-level binary classifier as the first stage of a two-stage cascade. Trained on v17's tile manifest (defect=1, BG=0). At inference, gates v17/v15's per-tile segmentation predictions.",
+      "training_data": {
+        "source": "v17 tile manifest (defect + BG, combined team+overseas)"
+      },
+      "recipe": {
+        "backbone": "EfficientNet-B0 (torchvision, ImageNet pretrained)",
+        "head": "GAP \u2192 Dropout(0.2) \u2192 Linear(1280, 1)",
+        "loss": "BCE-with-logits + pos_weight balancing",
+        "iters": "20,000 DDP-2",
+        "input_size": "1008\u00d71008 native"
+      },
+      "stage1_standalone": {
+        "AUROC": 0.768,
+        "AUPR": 0.072,
+        "R_at_0.5": 5.6,
+        "P_at_0.5": 82.1,
+        "F1_at_0.5": 0.1
+      },
+      "cascade_results": [
+        {
+          "pair": "v17 + v21 on team test",
+          "baseline_R": 87.74,
+          "baseline_P": 30.51,
+          "best_mode": "hard",
+          "best_T_gate": 0.9,
+          "best_R": 80.28,
+          "best_P": 35.62
+        },
+        {
+          "pair": "v17 + v21 on overseas test",
+          "baseline_R": 82.53,
+          "baseline_P": 53.68,
+          "best_mode": "hard",
+          "best_T_gate": 0.3,
+          "best_R": 80.76,
+          "best_P": 55.11
+        },
+        {
+          "pair": "v15 + v21 on team test",
+          "baseline_R": 90.25,
+          "baseline_P": 29.6,
+          "best_mode": "hard",
+          "best_T_gate": 0.9,
+          "best_R": 82.51,
+          "best_P": 36.62,
+          "records": 3083,
+          "best_t_gate": 0.9,
+          "partial": false
+        },
+        {
+          "pair": "v15 + v21 on overseas test",
+          "baseline_R": 84.88,
+          "baseline_P": 49.96,
+          "best_mode": "hard",
+          "best_T_gate": 0.8,
+          "best_R": 77.09,
+          "best_P": 55.26
+        }
+      ],
+      "results": [
+        {
+          "variant": "v17+v21 COMBINED, no gate (baseline)",
+          "mIoU": null,
+          "R": 86.09,
+          "P": 35.09,
+          "hits_target": false
+        },
+        {
+          "variant": "v17+v21 COMBINED, per-domain best gate",
+          "mIoU": null,
+          "R": 80.44,
+          "P": 40.12,
+          "hits_target": false
+        },
+        {
+          "variant": "v15+v21 COMBINED, no gate (baseline)",
+          "mIoU": null,
+          "R": 88.24,
+          "P": 34.69,
+          "hits_target": false,
+          "note": "micro across full team (3,083) + overseas (529) test imgs \u00b7 gate disabled (every tile passes)"
+        },
+        {
+          "variant": "v15+v21 COMBINED, per-domain best gate",
+          "mIoU": null,
+          "R": 80.48,
+          "P": 41.66,
+          "hits_target": false,
+          "note": "team uses hard T=0.9, overseas uses hard T=0.8 \u2014 picked per domain, micro pooled across both"
+        },
+        {
+          "variant": "team test (v17+v21, hard T=0.9)",
+          "mIoU": null,
+          "R": 80.28,
+          "P": 35.62,
+          "hits_target": false
+        },
+        {
+          "variant": "overseas test (v17+v21, hard T=0.3)",
+          "mIoU": null,
+          "R": 80.76,
+          "P": 55.11,
+          "hits_target": false
+        },
+        {
+          "variant": "team test (v15+v21, hard T=0.9)",
+          "mIoU": null,
+          "R": 82.51,
+          "P": 36.62,
+          "hits_target": false,
+          "note": "full 3,083 team-test imgs \u00b7 75.4% tiles gated out by stage-1"
+        },
+        {
+          "variant": "overseas test (v15+v21, hard T=0.8)",
+          "mIoU": null,
+          "R": 77.09,
+          "P": 55.26,
+          "hits_target": false
+        }
+      ],
+      "takeaway": "Cascade gating gave modest precision lift (~5 pp) at the cost of 5-8 pp recall. Stage-1 EfficientNet was too weak a ranker (AUROC 0.77, AUPR 0.07) given tile-level class imbalance (only 2.7% defect tiles). Net F1 slightly worse than v17/v15 alone. v22 (Swin-T) may rank better."
+    },
+    {
+      "id": "v22",
+      "name": "v22 \u2014 Swin-T tile classifier (ViT alternative cascade)",
+      "category": "model",
+      "status": "eval_in_progress",
+      "tags": [
+        "cascade",
+        "stage-1",
+        "swin-t",
+        "vit"
+      ],
+      "purpose": "Same role as v21 but ViT-based backbone. Direct A/B vs v21 holding everything else constant.",
+      "training_data": {
+        "source": "Same as v21"
+      },
+      "recipe": {
+        "backbone": "Swin-Tiny (timm, ImageNet pretrained, ~28M params)",
+        "input_size": "1008\u00d71008 native",
+        "iters": "20,000"
+      },
+      "cascade_results": [
+        {
+          "pair": "v17 + v22 on team test",
+          "baseline_R": 87.94,
+          "baseline_P": 29.75,
+          "best_mode": "hard",
+          "best_T_gate": 0.9,
+          "best_R": 73.51,
+          "best_P": 44.72
+        },
+        {
+          "pair": "v17 + v22 on overseas test",
+          "baseline_R": 82.97,
+          "baseline_P": 52.85,
+          "best_mode": "hard",
+          "best_T_gate": 0.4,
+          "best_R": 80.32,
+          "best_P": 55.93
+        },
+        {
+          "pair": "v15 + v22 on overseas test",
+          "status": "running (started 09:58 KST June 5)"
+        }
+      ],
+      "results": [
+        {
+          "variant": "team test (v17+v22, hard T=0.9)",
+          "mIoU": null,
+          "R": 73.51,
+          "P": 44.72,
+          "hits_target": false
+        },
+        {
+          "variant": "overseas test (v17+v22, hard T=0.4)",
+          "mIoU": null,
+          "R": 80.32,
+          "P": 55.93,
+          "hits_target": false
+        }
+      ],
+      "takeaway": "Swin-T cascade landed similar precision lift to EfficientNet but with WORSE recall on team (73.5% vs v21's 80.3%). ViT didn't dramatically improve over CNN for tile-level binary task. Final v15+v22 pairs pending.",
+      "caveats": [
+        "v15+v22 team-test eval still in progress (1,005/3,083 imgs); excluded until full to avoid biased numbers"
+      ]
+    },
+    {
+      "id": "v23",
+      "name": "v23 \u2014 overseas lab Cracks size-matched to v19",
+      "category": "model",
+      "status": "queued",
+      "tags": [
+        "overseas",
+        "cracks-only",
+        "lab-labelers",
+        "size-matched"
+      ],
+      "purpose": "Train another overseas lab Cracks model with the SAME train size as v19 (544 \u2248 531). Decouples labeler-style from data-size effects. v23 vs v19 = labeler-only A/B; v23 vs v16 = size-only A/B within same labeler set.",
+      "training_data": {
+        "train_size": 544,
+        "val_size": 44,
+        "test_size": 72,
+        "labeler": "overseas lab",
+        "scope": "La_Crack + Bond_Crack only (remasked)"
+      }
+    },
+    {
+      "id": "v24",
+      "name": "v24 \u2014 team train_no_leak re-split 80/10/10 WTG-disjoint",
+      "category": "model",
+      "status": "queued",
+      "tags": [
+        "team",
+        "wtg-disjoint"
+      ],
+      "purpose": "v12 recipe with team train_no_leak re-split into 80/10/10 with 0 WTG overlap. Tests performance under truly held-out turbine setting. Does NOT 'fix' v12; measures a different distribution.",
+      "training_data": {
+        "train_size": 7737,
+        "val_size": 961,
+        "test_size": 866,
+        "labeler": "team"
+      }
+    }
+  ],
+  "comparisons": [
+    {
+      "id": "v15_vs_v17",
+      "title": "v15 vs v17 \u2014 BG-tile ablation (--n-bg=3 vs 6)",
+      "purpose": "Hold everything constant except BG-tile sampling rate. Tests whether 2\u00d7 clean-blade exposure during training reduces FPs.",
+      "table": [
+        {
+          "test_set": "team test",
+          "variant": "no-TTA baseline",
+          "v15_R": 87.06,
+          "v15_P": 33.33,
+          "v17_R": 85.7,
+          "v17_P": 39.88,
+          "delta_P": "+6.55"
+        },
+        {
+          "test_set": "team test",
+          "variant": "no-TTA + T*",
+          "v15_R": 80.89,
+          "v15_P": 44.54,
+          "v17_R": 80.42,
+          "v17_P": 52.08,
+          "delta_P": "+7.54"
+        },
+        {
+          "test_set": "overseas test",
+          "variant": "no-TTA baseline",
+          "v15_R": 90.16,
+          "v15_P": 45.89,
+          "v17_R": 84.88,
+          "v17_P": 54.17,
+          "delta_P": "+8.28"
+        },
+        {
+          "test_set": "overseas test",
+          "variant": "no-TTA + T*",
+          "v15_R": 87.37,
+          "v15_P": 54.74,
+          "v17_R": 84.58,
+          "v17_P": 59.26,
+          "delta_P": "+4.52"
+        }
+      ],
+      "takeaway": "Doubling BG-tile exposure consistently improves precision by 4-8 pp at every operating point on both domains, at the cost of 1-5 pp recall. mIoU also improves by ~3 pp on baselines. Confirms the FP-on-featureless-blade-edges failure mode is partly a training-coverage problem."
+    },
+    {
+      "id": "v16_vs_v19",
+      "title": "v16 vs v19 \u2014 apples-to-apples labeler effect",
+      "purpose": "Both trained Crack-only at same recipe. v16 = overseas lab labelers (2,993 train), v19 = team labelers (531 train). Differs in WHO labeled AND data size (5.6\u00d7).",
+      "table": [
+        {
+          "model": "v16 (lab, 2,993)",
+          "no-TTA + T* R/P": "92.47 / 72.58",
+          "mIoU": 0.581
+        },
+        {
+          "model": "v19 (team, 531)",
+          "no-TTA + T* R/P": "78.33 / 69.12",
+          "mIoU": 0.528
+        },
+        {
+          "model": "gap",
+          "no-TTA + T* R/P": "\u221214.1 R / \u22123.5 P",
+          "mIoU": "\u22120.053"
+        }
+      ],
+      "takeaway": "Per-class precision is nearly identical (v19 La_Crack 70.7 P vs v16 73.1 P; v19 Bond_Crack 66.7 P vs v16 71.9 P). The 14 pp recall gap is almost entirely explained by training-data SIZE (5.6\u00d7), NOT labeler style. v23 (queued, size-matched) will confirm."
+    },
+    {
+      "id": "v17_vs_v20",
+      "title": "v17 vs v20 \u2014 aux classification head effect",
+      "purpose": "v20 = v17 + tile-level binary aux classification head, jointly trained. Tests whether multi-task aux loss improves segmentation as a regularizer.",
+      "table": [
+        {
+          "variant": "team test, no-TTA + T*",
+          "v17_R_P": "80.42 / 52.08",
+          "v20_R_P": "83.74 / 48.47",
+          "delta": "+3.3 R, \u22123.6 P"
+        },
+        {
+          "variant": "overseas test, no-TTA + T*",
+          "v17_R_P": "84.58 / 59.26",
+          "v20_R_P": "87.37 / 59.80",
+          "delta": "+2.8 R, +0.5 P"
+        },
+        {
+          "variant": "combined, no-TTA + T*",
+          "v17_R_P": "81.73 / 53.65",
+          "v20_R_P": "84.89 / 50.69",
+          "delta": "+3.2 R, \u22123.0 P"
+        }
+      ],
+      "takeaway": "v20 has v17's precision-leaning seg-head behavior but with v15's recall \u2014 best of both. Aux loss acted as regularizer; aux head itself NOT yet used at inference (Mode A/B inference pending)."
+    },
+    {
+      "id": "v13_cross",
+      "title": "v13 cross-domain \u2014 overseas model on team test",
+      "purpose": "Apply v13 (overseas-trained) ckpt to team test_diuid_10. Quantifies domain transfer gap.",
+      "table": [
+        {
+          "variant": "no-TTA baseline",
+          "R": 70.33,
+          "P": 28.89,
+          "mIoU": 0.204
+        },
+        {
+          "variant": "no-TTA + T*",
+          "R": 64.3,
+          "P": 56.76,
+          "mIoU": null
+        },
+        {
+          "variant": "full-TTA baseline",
+          "R": 67.68,
+          "P": 36.39,
+          "mIoU": 0.207
+        },
+        {
+          "variant": "full-TTA + T*",
+          "R": 62.47,
+          "P": 64.52,
+          "mIoU": null
+        }
+      ],
+      "takeaway": "v13 was 91 R / 66 P on its own overseas test. On team test it drops to 62.5 R / 64.5 P with full-TTA + T*. A 28.5 pp recall drop on the same model \u2014 strong evidence the team and overseas distributions are structurally different."
+    }
+  ],
+  "analyses": [
+    {
+      "id": "train_test_drift",
+      "title": "Team train \u2260 team test distribution",
+      "summary": "Critical mismatch: team train_no_leak is 98% defect-positive, avg 6.81 instances/img, 1.20 classes/img. Team test_diuid_10 is 38% defect-positive (62% empty), avg 2.33 instances/img, 0.48 classes/img. Model trained on defect-heavy data is biased to fire on edge texture \u2014 root cause of low team-test precision.",
+      "table": [
+        {
+          "split": "team train",
+          "pct_empty": "2.0%",
+          "avg_inst_per_img": 6.81,
+          "avg_classes_per_img": 1.2,
+          "imgs_per_WTG": 38.1
+        },
+        {
+          "split": "team val",
+          "pct_empty": "58.7%",
+          "avg_inst_per_img": 2.68,
+          "avg_classes_per_img": 0.52,
+          "imgs_per_WTG": 303
+        },
+        {
+          "split": "team test",
+          "pct_empty": "62.0%",
+          "avg_inst_per_img": 2.33,
+          "avg_classes_per_img": 0.48,
+          "imgs_per_WTG": 308
+        }
+      ]
+    },
+    {
+      "id": "overseas_no_drift",
+      "title": "Overseas \u2014 no train/test drift",
+      "summary": "Overseas train, val, test are statistically interchangeable \u2014 same empty rate (~6%), same instance count (~4-5/img), same classes/img (~0.94). Fair eval.",
+      "table": [
+        {
+          "split": "overseas train",
+          "pct_empty": "6.0%",
+          "avg_inst_per_img": 5.02,
+          "avg_classes_per_img": 0.94,
+          "imgs_per_WTG": 6.5
+        },
+        {
+          "split": "overseas val",
+          "pct_empty": "8.2%",
+          "avg_inst_per_img": 4.47,
+          "avg_classes_per_img": 0.93,
+          "imgs_per_WTG": 7.9
+        },
+        {
+          "split": "overseas test",
+          "pct_empty": "5.8%",
+          "avg_inst_per_img": 3.86,
+          "avg_classes_per_img": 0.95,
+          "imgs_per_WTG": 6.6
+        }
+      ]
+    },
+    {
+      "id": "multi_label",
+      "title": "Multi-label rates by dataset",
+      "summary": "Team data has many multi-class panoramas (20% in train). Overseas is almost mono-class (94% single-class) because each image came from a task-specific labeling queue.",
+      "table": [
+        {
+          "split": "team train",
+          "multi_class_pct": "19.7%",
+          "top_combo": "la_exposure + la_damage"
+        },
+        {
+          "split": "team test",
+          "multi_class_pct": "8.0%",
+          "top_combo": "la_exposure + la_damage"
+        },
+        {
+          "split": "overseas test",
+          "multi_class_pct": "0.4%",
+          "top_combo": "receptor_damage + receptor_lightning"
+        }
+      ]
+    },
+    {
+      "id": "receptor_damage_source",
+      "title": "Receptor_Damage source in overseas",
+      "summary": "Receptor_Damage class (id=8) is NEVER a primary overseas task. It appears only as a secondary annotation in the '3_Receptor_Lightning' task \u2014 labelers annotated both the lightning marks AND the underlying damage to the receptor. 88% of Receptor_Lightning task images also have Receptor_Damage annotations."
+    },
+    {
+      "id": "class_mapping",
+      "title": "Class ID mapping is consistent between team and overseas",
+      "summary": "Both datasets use the same canonical mapping (from windblade_tiled.py METAINFO): 0=BG, 1=la_exposure, 2=la_damage, 3=la_crack, 4=la_open, 5=bond_crack, 6=bond_open, 7=receptor_lightning, 8=receptor_damage. Verified via overseas task names \u2192 mask class IDs (all match expected)."
+    }
+  ],
+  "leaderboard": [
+    {
+      "objective": "\ud83d\udfe6 Best team test \u2014 closest to 85R/50P (combined-data models)",
+      "config": "v20 no-TTA + T* (team)",
+      "R": 83.74,
+      "P": 48.47,
+      "model_id": "v20"
+    },
+    {
+      "objective": "\ud83d\udfe6 Best team test \u2014 hits both 85R AND 50P",
+      "config": "v12 full-TTA + T* (team)",
+      "R": 83.06,
+      "P": 51.69,
+      "model_id": "v12"
+    },
+    {
+      "objective": "\ud83d\udfe6 Highest team-test recall (any P)",
+      "config": "v17 no-TTA baseline (team)",
+      "R": 85.7,
+      "P": 39.88,
+      "model_id": "v17"
+    },
+    {
+      "objective": "\ud83d\udfe6 Highest team-test precision",
+      "config": "v17 full-TTA + T* (team)",
+      "R": 79.27,
+      "P": 58.65,
+      "model_id": "v17"
+    },
+    {
+      "objective": "\ud83d\udfe7 Best overseas test (any model)",
+      "config": "v13 full-TTA + T* (overseas)",
+      "R": 91.34,
+      "P": 66.31,
+      "model_id": "v13"
+    },
+    {
+      "objective": "\ud83d\udfe7 Best overseas (combined-data model)",
+      "config": "v15 full-TTA + T* (overseas)",
+      "R": 87.96,
+      "P": 59.37,
+      "model_id": "v15"
+    },
+    {
+      "objective": "\ud83d\udfe7 Best overseas no-TTA + T* (combined)",
+      "config": "v20 no-TTA + T* (overseas)",
+      "R": 87.37,
+      "P": 59.8,
+      "model_id": "v20"
+    },
+    {
+      "objective": "\ud83d\udfe9 Best combined (closest to 85R/50P)",
+      "config": "v20 no-TTA + T* (combined)",
+      "R": 84.89,
+      "P": 50.69,
+      "model_id": "v20"
+    },
+    {
+      "objective": "\ud83d\udfe9 Best combined precision",
+      "config": "v17 full-TTA + T* (combined)",
+      "R": 80.11,
+      "P": 59.55,
+      "model_id": "v17"
+    },
+    {
+      "objective": "\ud83d\udfe9 Best combined recall",
+      "config": "v15 no-TTA baseline (combined)",
+      "R": 88.04,
+      "P": 36.57,
+      "model_id": "v15"
+    },
+    {
+      "objective": "\u2728 Cracks specialist (lab test 303 imgs)",
+      "config": "v16 full-TTA + T*",
+      "R": 88.01,
+      "P": 73.64,
+      "model_id": "v16"
+    },
+    {
+      "objective": "\u26a0 Worst \u2014 cross-domain transfer",
+      "config": "v13-cross full-TTA + T* (team)",
+      "R": 62.47,
+      "P": 64.52,
+      "model_id": "v13"
+    }
+  ],
+  "notes": "Threshold-applied mIoU now populated for variants where pred_masks_npz files exist."
+}

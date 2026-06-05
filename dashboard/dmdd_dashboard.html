@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DMDD experiments dashboard</title>
+<style>
+* { box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+       margin: 0; padding: 0; background: #f7f8fa; color: #222;
+       display: grid; grid-template-columns: 230px 1fr; min-height: 100vh; }
+aside.sidebar { position: sticky; top: 0; align-self: start; height: 100vh; overflow-y: auto;
+                background: #ffffff; border-right: 1px solid #d0d7de; padding: 18px 14px;
+                font-size: 13px; box-shadow: inset -1px 0 0 rgba(0,0,0,0.02); }
+aside.sidebar h3 { margin: 0 0 6px 0; font-size: 11px; color: #57606a; text-transform: uppercase; letter-spacing: 0.8px; font-weight: 700; }
+aside.sidebar .nav-section { margin-bottom: 14px; }
+aside.sidebar ul { list-style: none; padding: 0; margin: 0; }
+aside.sidebar li { margin: 0; }
+aside.sidebar li a { display: block; padding: 4px 8px; border-radius: 5px; text-decoration: none; color: #24292f; }
+aside.sidebar li a:hover { background: #f0f4ff; color: #0969da; }
+aside.sidebar li.indent a { padding-left: 18px; font-size: 12.5px; color: #57606a; }
+aside.sidebar li.indent a:hover { color: #0969da; }
+aside.sidebar .exp-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; vertical-align: middle; border: 1px solid #00000020; }
+main.main-content { padding: 24px 32px; min-width: 0; }
+h1 { margin: 0 0 4px 0; font-size: 28px; }
+h2 { margin-top: 36px; padding-bottom: 6px; border-bottom: 2px solid #d0d7de; font-size: 22px; scroll-margin-top: 12px; }
+details.exp { scroll-margin-top: 12px; }
+.section-anchor { scroll-margin-top: 12px; }
+
+/* Bullseye target */
+.bullseye-wrap { background: white; border: 1px solid #d0d7de; border-radius: 12px;
+                 padding: 18px; margin: 14px 0 20px 0; box-shadow: 0 2px 6px rgba(0,0,0,0.04); }
+.bullseye-wrap .header { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+.bullseye-wrap h3 { margin: 0; font-size: 16px; }
+.bullseye-wrap .target-hint { color: #57606a; font-size: 12px; }
+.bullseye-svg { width: 100%; max-width: 720px; height: auto; display: block; margin: 0 auto; }
+.bullseye-legend { font-size: 12px; color: #444; margin-top: 8px; display: flex; flex-wrap: wrap; gap: 14px; justify-content: center; }
+.bullseye-legend .lg-item { display: inline-flex; align-items: center; gap: 5px; }
+.bullseye-legend .lg-dot { width: 10px; height: 10px; border-radius: 50%; border: 1px solid #00000040; }
+
+/* Bar charts */
+.bar-charts-wrap { display: grid; grid-template-columns: 1fr; gap: 14px; margin: 8px 0 18px 0; }
+.bar-chart-card { background: white; border: 1px solid #d0d7de; border-radius: 10px; padding: 14px 18px; }
+.bar-chart-card h4 { margin: 0 0 6px 0; font-size: 13px; color: #24292f; text-transform: none; letter-spacing: 0; font-weight: 600; }
+.bar-chart-card .bc-hint { color: #57606a; font-size: 11.5px; margin: 0 0 8px 0; }
+.bar-chart-svg { width: 100%; height: auto; display: block; }
+
+@media (max-width: 900px) {
+  body { grid-template-columns: 1fr; }
+  aside.sidebar { position: relative; height: auto; max-height: 280px; }
+  main.main-content { padding: 18px; }
+}
+
+h4 { margin: 12px 0 6px 0; font-size: 14px; color: #57606a; text-transform: uppercase; letter-spacing: 0.5px; }
+.meta { color: #57606a; font-size: 13px; margin-bottom: 24px; }
+.controls { background: white; border: 1px solid #d0d7de; border-radius: 8px; padding: 12px; position: sticky; top: 0; z-index: 100; margin-bottom: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.04); }
+.controls input[type=search] { width: 50%; padding: 8px 12px; border: 1px solid #d0d7de; border-radius: 6px; font-size: 14px; }
+.controls button { padding: 8px 12px; border: 1px solid #d0d7de; border-radius: 6px; background: white; cursor: pointer; font-size: 14px; margin-left: 6px; }
+.controls button:hover { background: #f3f4f6; }
+.controls button.primary { background: #0969da; color: white; border-color: #0969da; }
+.controls button.primary:hover { background: #0758c3; }
+
+details.exp { background: white; border: 1px solid #d0d7de; border-radius: 8px; margin-bottom: 8px; padding: 0; }
+details.exp[open] { box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+details.exp summary { padding: 12px 14px; cursor: pointer; display: flex; align-items: center; gap: 8px; list-style: none; }
+details.exp summary::-webkit-details-marker { display: none; }
+details.exp summary:hover { background: #f6f8fa; }
+details.exp summary::before { content: "▶"; font-size: 10px; color: #57606a; transition: transform 0.15s; margin-right: 2px; }
+details.exp[open] > summary::before { transform: rotate(90deg); }
+.exp-name { font-weight: 600; flex-grow: 1; }
+.anchor { text-decoration: none; color: #57606a; opacity: 0.4; font-size: 12px; }
+.anchor:hover { opacity: 1; }
+
+.badge { display: inline-block; padding: 3px 8px; border-radius: 10px; color: white; font-size: 11px; font-weight: 600; text-transform: uppercase; }
+.tag { display: inline-block; padding: 2px 8px; border-radius: 10px; background: #e8eaf0; color: #57606a; font-size: 11px; margin-left: 2px; }
+
+.section { padding: 8px 16px 12px 16px; }
+.section p { margin: 4px 0; line-height: 1.5; }
+.section.caveat { background: #fff8e1; border-left: 3px solid #f0a000; }
+
+table { border-collapse: collapse; margin: 4px 0; font-size: 13px; }
+table.kv { width: 100%; }
+table.kv th { text-align: left; padding: 4px 8px; color: #57606a; font-weight: normal; width: 30%; vertical-align: top; }
+table.kv td { padding: 4px 8px; }
+table.kv tr:nth-child(even) { background: #f6f8fa; }
+table.results { border: 1px solid #d0d7de; width: 100%; }
+table.results th { background: #f6f8fa; padding: 6px 10px; text-align: left; border-bottom: 1px solid #d0d7de; font-size: 12px; }
+table.results td { padding: 5px 10px; border-bottom: 1px solid #eaeef2; }
+table.results tr.hit { background: #e7f5e3; }
+table.results tr.hit td { font-weight: 600; }
+table.results tr.pinned td:first-child { color: #c00; font-weight: 700; }
+table.results tr.pinned { border-left: 3px solid #0969da; }
+table.results tr.deprio td { color: #888; }
+table.results tr.deprio { opacity: 0.7; }
+table.sortable th.sort-col { cursor: pointer; user-select: none; }
+table.sortable th.sort-col:hover { background: #e8eaf0; }
+table.sortable th.sort-col::after { content: " ⇅"; color: #aaa; font-size: 10px; }
+table.sortable th.sort-col.sort-asc::after  { content: " ↑"; color: #0969da; }
+table.sortable th.sort-col.sort-desc::after { content: " ↓"; color: #0969da; }
+
+/* Domain-card grouping with subtle background shading */
+.domain-card { border-radius: 10px; padding: 14px 18px; margin-bottom: 16px; border: 1px solid #d0d7de; }
+.domain-card .domain-header { margin: 0 0 8px 0; font-size: 16px; padding-bottom: 6px; border-bottom: 1px solid; }
+.team-card     { background: #eaf2fb; }            /* light blue */
+.team-card .domain-header     { border-color: #c0d4ec; color: #1a4a8a; }
+.team-card table.results th   { background: #d6e6f7; }
+.overseas-card { background: #fdf0e6; }            /* light orange */
+.overseas-card .domain-header { border-color: #f0d2b8; color: #8a4a1a; }
+.overseas-card table.results th { background: #f9dec5; }
+.combined-card { background: #ecf6e8; }            /* light green */
+.combined-card .domain-header { border-color: #cce5c2; color: #2a6a2a; }
+.combined-card table.results th { background: #dbeed2; }
+.domain-card table.results tr.hit { background: #c4ebc0 !important; }
+.domain-card table.results tr.pinned { border-left: 4px solid #0969da; }
+.domain-card table.results { background: white; }
+.copy-btn { background: none; border: none; cursor: pointer; opacity: 0.4; font-size: 12px; }
+.copy-btn:hover { opacity: 1; }
+
+#compare-modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; padding: 40px; overflow: auto; }
+#compare-modal.open { display: block; }
+#compare-modal .modal-content { background: white; border-radius: 8px; padding: 24px; max-width: 1200px; margin: 0 auto; }
+#compare-modal .close { float: right; cursor: pointer; font-size: 20px; color: #57606a; }
+.hidden { display: none; }
+
+footer { margin-top: 32px; padding: 16px 0; color: #57606a; font-size: 12px; text-align: center; }
+</style>
+</head><body id="top">
+
+<aside class="sidebar"><div class="nav-section"><h3>Jump to</h3><ul><li><a href="#top">⌂ Top</a></li><li><a href="#target-view">🎯 Target view</a></li><li><a href="#leaderboard">🏆 Leaderboard</a></li><li><a href="#chart-gallery">📊 Charts</a></li><li><a href="#consolidated">📋 Consolidated</a></li><li class="indent"><a href="#consolidated-team-card">🟦 Team</a></li><li class="indent"><a href="#consolidated-overseas-card">🟧 Overseas</a></li><li class="indent"><a href="#consolidated-combined-card">🟩 Combined</a></li><li><a href="#experiments">🧪 Experiments</a></li><li class="indent"><a href="#exp-v24"><span class="exp-dot" style="background:#f3e8ff"></span><strong>v24</strong> v24 — team train_no_leak re-…</a></li><li class="indent"><a href="#exp-v23"><span class="exp-dot" style="background:#ffe8e8"></span><strong>v23</strong> v23 — overseas lab Cracks si…</a></li><li class="indent"><a href="#exp-v22"><span class="exp-dot" style="background:#fff7da"></span><strong>v22</strong> v22 — Swin-T tile classifier…</a></li><li class="indent"><a href="#exp-v21"><span class="exp-dot" style="background:#e8f5ff"></span><strong>v21</strong> v21 — EfficientNet-B0 tile c…</a></li><li class="indent"><a href="#exp-v20"><span class="exp-dot" style="background:#d9f5e1"></span><strong>v20</strong> v20 — combined model + auxil…</a></li><li class="indent"><a href="#exp-v19"><span class="exp-dot" style="background:#fff0d8"></span><strong>v19</strong> v19 — team Cracks remasked (…</a></li><li class="indent"><a href="#exp-v17"><span class="exp-dot" style="background:#ebebfa"></span><strong>v17</strong> v17 — combined + 2× BG tile …</a></li><li class="indent"><a href="#exp-v16"><span class="exp-dot" style="background:#ffe0f0"></span><strong>v16</strong> v16 — overseas lab Cracks sp…</a></li><li class="indent"><a href="#exp-v15"><span class="exp-dot" style="background:#dceefd"></span><strong>v15</strong> v15 — combined team + overseas</a></li><li class="indent"><a href="#exp-v13"><span class="exp-dot" style="background:#fff3dc"></span><strong>v13</strong> v13 — overseas-only</a></li><li class="indent"><a href="#exp-v12"><span class="exp-dot" style="background:#ececec"></span><strong>v12</strong> v12 — team baseline (leak-fr…</a></li><li><a href="#comparisons">🔁 Comparisons</a></li><li><a href="#analyses">📈 Analyses</a></li></ul></div></aside>
+
+<main class="main-content">
+
+<h1>DMDD experiments dashboard</h1>
+<p class="meta">Last updated: <strong>2026-06-05 15:00 KST</strong>
+&nbsp;·&nbsp; Customer target: <strong>micro R ≥ 85%, micro P ≥ 50%</strong>
+&nbsp;·&nbsp; Total experiments: 11
+&nbsp;·&nbsp; done 8 · eval_in_progress 1 · queued 2</p>
+
+<div id="target-view" class="bullseye-wrap section-anchor">
+  <div class="header">
+    <h3>🎯 Target view — how close are we to micro R ≥ 85%, micro P ≥ 50%?</h3>
+    <span class="target-hint">Green bullseye = customer target. Dots closer to the center are better. Hover for details.</span>
+  </div>
+  <svg class="bullseye-svg" viewBox="0 0 720 360" xmlns="http://www.w3.org/2000/svg">
+<rect x="0" y="0" width="720" height="360" fill="#fafbfc"/>
+<line x1="50.0" y1="16" x2="50.0" y2="322" stroke="#e8eaf0" stroke-width="1"/>
+<text x="50.0" y="336" text-anchor="middle" font-size="10" fill="#57606a">50</text>
+<line x1="180.0" y1="16" x2="180.0" y2="322" stroke="#e8eaf0" stroke-width="1"/>
+<text x="180.0" y="336" text-anchor="middle" font-size="10" fill="#57606a">60</text>
+<line x1="310.0" y1="16" x2="310.0" y2="322" stroke="#e8eaf0" stroke-width="1"/>
+<text x="310.0" y="336" text-anchor="middle" font-size="10" fill="#57606a">70</text>
+<line x1="440.0" y1="16" x2="440.0" y2="322" stroke="#e8eaf0" stroke-width="1"/>
+<text x="440.0" y="336" text-anchor="middle" font-size="10" fill="#57606a">80</text>
+<line x1="570.0" y1="16" x2="570.0" y2="322" stroke="#e8eaf0" stroke-width="1"/>
+<text x="570.0" y="336" text-anchor="middle" font-size="10" fill="#57606a">90</text>
+<line x1="700.0" y1="16" x2="700.0" y2="322" stroke="#e8eaf0" stroke-width="1"/>
+<text x="700.0" y="336" text-anchor="middle" font-size="10" fill="#57606a">100</text>
+<line x1="50" y1="322.0" x2="700" y2="322.0" stroke="#e8eaf0" stroke-width="1"/>
+<text x="44" y="325.0" text-anchor="end" font-size="10" fill="#57606a">0</text>
+<line x1="50" y1="283.8" x2="700" y2="283.8" stroke="#e8eaf0" stroke-width="1"/>
+<text x="44" y="286.8" text-anchor="end" font-size="10" fill="#57606a">10</text>
+<line x1="50" y1="245.5" x2="700" y2="245.5" stroke="#e8eaf0" stroke-width="1"/>
+<text x="44" y="248.5" text-anchor="end" font-size="10" fill="#57606a">20</text>
+<line x1="50" y1="207.2" x2="700" y2="207.2" stroke="#e8eaf0" stroke-width="1"/>
+<text x="44" y="210.2" text-anchor="end" font-size="10" fill="#57606a">30</text>
+<line x1="50" y1="169.0" x2="700" y2="169.0" stroke="#e8eaf0" stroke-width="1"/>
+<text x="44" y="172.0" text-anchor="end" font-size="10" fill="#57606a">40</text>
+<line x1="50" y1="130.8" x2="700" y2="130.8" stroke="#e8eaf0" stroke-width="1"/>
+<text x="44" y="133.8" text-anchor="end" font-size="10" fill="#57606a">50</text>
+<line x1="50" y1="92.5" x2="700" y2="92.5" stroke="#e8eaf0" stroke-width="1"/>
+<text x="44" y="95.5" text-anchor="end" font-size="10" fill="#57606a">60</text>
+<line x1="50" y1="54.2" x2="700" y2="54.2" stroke="#e8eaf0" stroke-width="1"/>
+<text x="44" y="57.2" text-anchor="end" font-size="10" fill="#57606a">70</text>
+<line x1="50" y1="16.0" x2="700" y2="16.0" stroke="#e8eaf0" stroke-width="1"/>
+<text x="44" y="19.0" text-anchor="end" font-size="10" fill="#57606a">80</text>
+<rect x="505.0" y="16" width="195.0" height="114.8" fill="#86efac" fill-opacity="0.22" stroke="none"/>
+<circle cx="505.0" cy="130.8" r="120" fill="#86efac" fill-opacity="0.18" stroke="none"/>
+<circle cx="505.0" cy="130.8" r="90" fill="#bbf7d0" fill-opacity="0.28" stroke="none"/>
+<circle cx="505.0" cy="130.8" r="60" fill="#86efac" fill-opacity="0.34" stroke="none"/>
+<circle cx="505.0" cy="130.8" r="32" fill="#22c55e" fill-opacity="0.45" stroke="none"/>
+<line x1="505.0" y1="16" x2="505.0" y2="322" stroke="#dc2626" stroke-width="1.2" stroke-dasharray="4 3"/>
+<line x1="50" y1="130.8" x2="700" y2="130.8" stroke="#dc2626" stroke-width="1.2" stroke-dasharray="4 3"/>
+<circle cx="505.0" cy="130.8" r="6" fill="#dc2626" stroke="white" stroke-width="2"/>
+<text x="515.0" y="120.8" font-size="11" font-weight="700" fill="#991b1b">target 85R / 50P</text>
+<text x="375.0" y="354" text-anchor="middle" font-size="11" fill="#24292f" font-weight="600">micro Recall (%)</text>
+<text x="14" y="169.0" text-anchor="middle" font-size="11" fill="#24292f" font-weight="600" transform="rotate(-90 14 169.0)">micro Precision (%)</text>
+<g><circle cx="488.6" cy="136.6" r="6" fill="#d9f5e1" stroke="#24292f" stroke-width="1.2"/><title>v20 — v20 no-TTA + T* (team) · R=83.74% P=48.47%</title></g>
+<text x="496.6" y="129.6" font-size="10.5" fill="#24292f" font-weight="600">v20</text>
+<g><circle cx="479.8" cy="124.3" r="6" fill="#ececec" stroke="#24292f" stroke-width="1.2"/><title>v12 — v12 full-TTA + T* (team) · R=83.06% P=51.69%</title></g>
+<text x="487.8" y="129.3" font-size="10.5" fill="#24292f" font-weight="600">v12</text>
+<g><circle cx="514.1" cy="169.5" r="6" fill="#ebebfa" stroke="#24292f" stroke-width="1.2"/><title>v17 — v17 no-TTA baseline (team) · R=85.70% P=39.88%</title></g>
+<text x="522.1" y="162.5" font-size="10.5" fill="#24292f" font-weight="600">v17</text>
+<g><circle cx="430.5" cy="97.7" r="6" fill="#ebebfa" stroke="#24292f" stroke-width="1.2"/><title>v17 — v17 full-TTA + T* (team) · R=79.27% P=58.65%</title></g>
+<text x="438.5" y="90.7" font-size="10.5" fill="#24292f" font-weight="600">v17</text>
+<g><circle cx="587.4" cy="68.4" r="6" fill="#fff3dc" stroke="#24292f" stroke-width="1.2"/><title>v13 — v13 full-TTA + T* (overseas) · R=91.34% P=66.31%</title></g>
+<text x="595.4" y="61.4" font-size="10.5" fill="#24292f" font-weight="600">v13</text>
+<g><circle cx="543.5" cy="94.9" r="6" fill="#dceefd" stroke="#24292f" stroke-width="1.2"/><title>v15 — v15 full-TTA + T* (overseas) · R=87.96% P=59.37%</title></g>
+<text x="551.5" y="87.9" font-size="10.5" fill="#24292f" font-weight="600">v15</text>
+<g><circle cx="535.8" cy="93.3" r="6" fill="#d9f5e1" stroke="#24292f" stroke-width="1.2"/><title>v20 — v20 no-TTA + T* (overseas) · R=87.37% P=59.80%</title></g>
+<text x="543.8" y="98.3" font-size="10.5" fill="#24292f" font-weight="600">v20</text>
+<g><circle cx="503.6" cy="128.1" r="6" fill="#d9f5e1" stroke="#24292f" stroke-width="1.2"/><title>v20 — v20 no-TTA + T* (combined) · R=84.89% P=50.69%</title></g>
+<text x="511.6" y="133.1" font-size="10.5" fill="#24292f" font-weight="600">v20</text>
+<g><circle cx="441.4" cy="94.2" r="6" fill="#ebebfa" stroke="#24292f" stroke-width="1.2"/><title>v17 — v17 full-TTA + T* (combined) · R=80.11% P=59.55%</title></g>
+<text x="449.4" y="99.2" font-size="10.5" fill="#24292f" font-weight="600">v17</text>
+<g><circle cx="544.5" cy="182.1" r="6" fill="#dceefd" stroke="#24292f" stroke-width="1.2"/><title>v15 — v15 no-TTA baseline (combined) · R=88.04% P=36.57%</title></g>
+<text x="552.5" y="175.1" font-size="10.5" fill="#24292f" font-weight="600">v15</text>
+<g><circle cx="544.1" cy="40.3" r="6" fill="#ffe0f0" stroke="#24292f" stroke-width="1.2"/><title>v16 — v16 full-TTA + T* · R=88.01% P=73.64%</title></g>
+<text x="552.1" y="33.3" font-size="10.5" fill="#24292f" font-weight="600">v16</text>
+<g><circle cx="212.1" cy="75.2" r="6" fill="#fff3dc" stroke="#24292f" stroke-width="1.2"/><title>v13 — v13-cross full-TTA + T* (team) · R=62.47% P=64.52%</title></g>
+<text x="220.1" y="68.2" font-size="10.5" fill="#24292f" font-weight="600">v13</text>
+</svg>
+</div>
+
+<h2 id="leaderboard" class="section-anchor">🏆 Leaderboard</h2>
+<p>Best operating point per objective. Color-coded by experiment to match the consolidated tables.
+🟦 team / 🟧 overseas / 🟩 combined / ✨ specialty / ⚠ negative result.</p>
+<table class="results leaderboard" style="width:100%;">
+<thead><tr><th>Objective</th><th>Config</th><th>micro R</th><th>micro P</th></tr></thead>
+<tbody>
+
+<tr class="row-v20" style="background:#d9f5e1"><td>🟦 Best team test — closest to 85R/50P (combined-data models)</td><td><a href='#exp-v20'>v20 no-TTA + T* (team)</a></td><td>83.74%</td><td>48.47%</td></tr>
+<tr class="row-v12" style="background:#ececec"><td>🟦 Best team test — hits both 85R AND 50P</td><td><a href='#exp-v12'>v12 full-TTA + T* (team)</a></td><td>83.06%</td><td>51.69%</td></tr>
+<tr class="row-v17" style="background:#ebebfa"><td>🟦 Highest team-test recall (any P)</td><td><a href='#exp-v17'>v17 no-TTA baseline (team)</a></td><td>85.70%</td><td>39.88%</td></tr>
+<tr class="row-v17" style="background:#ebebfa"><td>🟦 Highest team-test precision</td><td><a href='#exp-v17'>v17 full-TTA + T* (team)</a></td><td>79.27%</td><td>58.65%</td></tr>
+<tr class="row-v13" style="background:#fff3dc"><td>🟧 Best overseas test (any model)</td><td><a href='#exp-v13'>v13 full-TTA + T* (overseas)</a></td><td>91.34%</td><td>66.31%</td></tr>
+<tr class="row-v15" style="background:#dceefd"><td>🟧 Best overseas (combined-data model)</td><td><a href='#exp-v15'>v15 full-TTA + T* (overseas)</a></td><td>87.96%</td><td>59.37%</td></tr>
+<tr class="row-v20" style="background:#d9f5e1"><td>🟧 Best overseas no-TTA + T* (combined)</td><td><a href='#exp-v20'>v20 no-TTA + T* (overseas)</a></td><td>87.37%</td><td>59.80%</td></tr>
+<tr class="row-v20" style="background:#d9f5e1"><td>🟩 Best combined (closest to 85R/50P)</td><td><a href='#exp-v20'>v20 no-TTA + T* (combined)</a></td><td>84.89%</td><td>50.69%</td></tr>
+<tr class="row-v17" style="background:#ebebfa"><td>🟩 Best combined precision</td><td><a href='#exp-v17'>v17 full-TTA + T* (combined)</a></td><td>80.11%</td><td>59.55%</td></tr>
+<tr class="row-v15" style="background:#dceefd"><td>🟩 Best combined recall</td><td><a href='#exp-v15'>v15 no-TTA baseline (combined)</a></td><td>88.04%</td><td>36.57%</td></tr>
+<tr class="row-v16" style="background:#ffe0f0"><td>✨ Cracks specialist (lab test 303 imgs)</td><td><a href='#exp-v16'>v16 full-TTA + T*</a></td><td>88.01%</td><td>73.64%</td></tr>
+<tr class="row-v13" style="background:#fff3dc"><td>⚠ Worst — cross-domain transfer</td><td><a href='#exp-v13'>v13-cross full-TTA + T* (team)</a></td><td>62.47%</td><td>64.52%</td></tr>
+</tbody></table>
+<h2>Class ID mapping</h2>
+<table class="kv" style="max-width:400px;">
+<tr><th>0</th><td>background</td></tr>
+<tr><th>1</th><td>la_exposure</td></tr>
+<tr><th>2</th><td>la_damage</td></tr>
+<tr><th>3</th><td>la_crack</td></tr>
+<tr><th>4</th><td>la_open</td></tr>
+<tr><th>5</th><td>bond_crack</td></tr>
+<tr><th>6</th><td>bond_open</td></tr>
+<tr><th>7</th><td>receptor_lightning</td></tr>
+<tr><th>8</th><td>receptor_damage</td></tr>
+</table>
+<h2 id="chart-gallery" class="section-anchor">📊 Charts</h2>
+<p>All charts are static SVG so they render in JupyterLab without JavaScript. Hover any bar / dot for the exact numbers and the variant it represents.</p>
+<div class="bar-charts-wrap">
+<div class="bar-chart-card"><h4>🟦 Team test — micro Recall vs Precision</h4><p class="bc-hint">One bar pair per model (best variant). Dashed lines = customer target (R=85, P=50).</p><svg class="bar-chart-svg" viewBox="0 0 420 220" xmlns="http://www.w3.org/2000/svg">
+<rect x="0" y="0" width="420" height="220" fill="#fff"/>
+<line x1="38" y1="178.0" x2="406" y2="178.0" stroke="#eef0f4" stroke-width="1"/>
+<text x="33" y="181.0" text-anchor="end" font-size="9.5" fill="#57606a">0</text>
+<line x1="38" y1="140.0" x2="406" y2="140.0" stroke="#eef0f4" stroke-width="1"/>
+<text x="33" y="143.0" text-anchor="end" font-size="9.5" fill="#57606a">25</text>
+<line x1="38" y1="102.0" x2="406" y2="102.0" stroke="#eef0f4" stroke-width="1"/>
+<text x="33" y="105.0" text-anchor="end" font-size="9.5" fill="#57606a">50</text>
+<line x1="38" y1="64.0" x2="406" y2="64.0" stroke="#eef0f4" stroke-width="1"/>
+<text x="33" y="67.0" text-anchor="end" font-size="9.5" fill="#57606a">75</text>
+<line x1="38" y1="26.0" x2="406" y2="26.0" stroke="#eef0f4" stroke-width="1"/>
+<text x="33" y="29.0" text-anchor="end" font-size="9.5" fill="#57606a">100</text>
+<line x1="38" y1="48.8" x2="406" y2="48.8" stroke="#0969da" stroke-width="1" stroke-dasharray="3 3" opacity="0.7"/>
+<text x="404" y="46.8" text-anchor="end" font-size="9" fill="#0969da">target R=85</text>
+<line x1="38" y1="102.0" x2="406" y2="102.0" stroke="#dc2626" stroke-width="1" stroke-dasharray="3 3" opacity="0.7"/>
+<text x="404" y="100.0" text-anchor="end" font-size="9" fill="#dc2626">target P=50</text>
+<rect x="46.0" y="66.3" width="14" height="111.7" fill="#fff7da" stroke="#24292f" stroke-width="0.7"><title>v22 micro R = 73.51% · team test (v17+v22, hard T=0.9)</title></rect>
+<text x="53.0" y="64.3" text-anchor="middle" font-size="9" fill="#24292f">73.5</text>
+<rect x="64.0" y="110.0" width="14" height="68.0" fill="#fff7da" fill-opacity="0.45" stroke="#24292f" stroke-width="0.7" stroke-dasharray="2 2"><title>v22 micro P = 44.72% · team test (v17+v22, hard T=0.9)</title></rect>
+<text x="71.0" y="108.0" text-anchor="middle" font-size="9" fill="#24292f">44.7</text>
+<a href="#exp-v22"><text x="62.0" y="192.0" text-anchor="middle" font-size="10.5" font-weight="600" fill="#0969da">v22</text></a>
+<rect x="96.0" y="52.6" width="14" height="125.4" fill="#e8f5ff" stroke="#24292f" stroke-width="0.7"><title>v21 micro R = 82.51% · team test (v15+v21, hard T=0.9)</title></rect>
+<text x="103.0" y="50.6" text-anchor="middle" font-size="9" fill="#24292f">82.5</text>
+<rect x="114.0" y="122.3" width="14" height="55.7" fill="#e8f5ff" fill-opacity="0.45" stroke="#24292f" stroke-width="0.7" stroke-dasharray="2 2"><title>v21 micro P = 36.62% · team test (v15+v21, hard T=0.9)</title></rect>
+<text x="121.0" y="120.3" text-anchor="middle" font-size="9" fill="#24292f">36.6</text>
+<a href="#exp-v21"><text x="112.0" y="192.0" text-anchor="middle" font-size="10.5" font-weight="600" fill="#0969da">v21</text></a>
+<rect x="146.0" y="50.7" width="14" height="127.3" fill="#d9f5e1" stroke="#24292f" stroke-width="0.7"><title>v20 micro R = 83.74% · team test, no-TTA + T*</title></rect>
+<text x="153.0" y="48.7" text-anchor="middle" font-size="9" fill="#24292f">83.7</text>
+<rect x="164.0" y="104.3" width="14" height="73.7" fill="#d9f5e1" fill-opacity="0.45" stroke="#24292f" stroke-width="0.7" stroke-dasharray="2 2"><title>v20 micro P = 48.47% · team test, no-TTA + T*</title></rect>
+<text x="171.0" y="102.3" text-anchor="middle" font-size="9" fill="#24292f">48.5</text>
+<a href="#exp-v20"><text x="162.0" y="192.0" text-anchor="middle" font-size="10.5" font-weight="600" fill="#0969da">v20</text></a>
+<rect x="196.0" y="58.9" width="14" height="119.1" fill="#fff0d8" stroke="#24292f" stroke-width="0.7"><title>v19 micro R = 78.33% · no-TTA baseline</title></rect>
+<text x="203.0" y="56.9" text-anchor="middle" font-size="9" fill="#24292f">78.3</text>
+<rect x="214.0" y="72.9" width="14" height="105.1" fill="#fff0d8" fill-opacity="0.45" stroke="#24292f" stroke-width="0.7" stroke-dasharray="2 2"><title>v19 micro P = 69.12% · no-TTA baseline</title></rect>
+<text x="221.0" y="70.9" text-anchor="middle" font-size="9" fill="#24292f">69.1</text>
+<a href="#exp-v19"><text x="212.0" y="192.0" text-anchor="middle" font-size="10.5" font-weight="600" fill="#0969da">v19</text></a>
+<rect x="246.0" y="57.5" width="14" height="120.5" fill="#ebebfa" stroke="#24292f" stroke-width="0.7"><title>v17 micro R = 79.27% · team test, full-TTA + T*</title></rect>
+<text x="253.0" y="55.5" text-anchor="middle" font-size="9" fill="#24292f">79.3</text>
+<rect x="264.0" y="88.9" width="14" height="89.1" fill="#ebebfa" fill-opacity="0.45" stroke="#24292f" stroke-width="0.7" stroke-dasharray="2 2"><title>v17 micro P = 58.65% · team test, full-TTA + T*</title></rect>
+<text x="271.0" y="86.9" text-anchor="middle" font-size="9" fill="#24292f">58.6</text>
+<a href="#exp-v17"><text x="262.0" y="192.0" text-anchor="middle" font-size="10.5" font-weight="600" fill="#0969da">v17</text></a>
+<rect x="296.0" y="54.7" width="14" height="123.3" fill="#dceefd" stroke="#24292f" stroke-width="0.7"><title>v15 micro R = 81.10% · team test, full-TTA + T*</title></rect>
+<text x="303.0" y="52.7" text-anchor="middle" font-size="9" fill="#24292f">81.1</text>
+<rect x="314.0" y="100.3" width="14" height="77.7" fill="#dceefd" fill-opacity="0.45" stroke="#24292f" stroke-width="0.7" stroke-dasharray="2 2"><title>v15 micro P = 51.11% · team test, full-TTA + T*</title></rect>
+<text x="321.0" y="98.3" text-anchor="middle" font-size="9" fill="#24292f">51.1</text>
+<a href="#exp-v15"><text x="312.0" y="192.0" text-anchor="middle" font-size="10.5" font-weight="600" fill="#0969da">v15</text></a>
+<rect x="346.0" y="51.7" width="14" height="126.3" fill="#ececec" stroke="#24292f" stroke-width="0.7"><title>v12 micro R = 83.06% · full-TTA + T*</title></rect>
+<text x="353.0" y="49.7" text-anchor="middle" font-size="9" fill="#24292f">83.1</text>
+<rect x="364.0" y="99.4" width="14" height="78.6" fill="#ececec" fill-opacity="0.45" stroke="#24292f" stroke-width="0.7" stroke-dasharray="2 2"><title>v12 micro P = 51.69% · full-TTA + T*</title></rect>
+<text x="371.0" y="97.4" text-anchor="middle" font-size="9" fill="#24292f">51.7</text>
+<a href="#exp-v12"><text x="362.0" y="192.0" text-anchor="middle" font-size="10.5" font-weight="600" fill="#0969da">v12</text></a>
+<rect x="38" y="203" width="10" height="10" fill="#888"/>
+<text x="52" y="212" font-size="10.5" fill="#24292f">Recall</text>
+<rect x="108" y="203" width="10" height="10" fill="#888" fill-opacity="0.45" stroke="#24292f" stroke-width="0.7" stroke-dasharray="2 2"/>
+<text x="122" y="212" font-size="10.5" fill="#24292f">Precision</text>
+<text x="210.0" y="14" text-anchor="middle" font-size="11" font-weight="600" fill="#24292f">Team test — best variant per model</text>
+</svg></div>
+<div class="bar-chart-card"><h4>🟧 Overseas test</h4><p class="bc-hint">Best variant per model on the overseas test set.</p><svg class="bar-chart-svg" viewBox="0 0 420 220" xmlns="http://www.w3.org/2000/svg">
+<rect x="0" y="0" width="420" height="220" fill="#fff"/>
+<line x1="38" y1="178.0" x2="406" y2="178.0" stroke="#eef0f4" stroke-width="1"/>
+<text x="33" y="181.0" text-anchor="end" font-size="9.5" fill="#57606a">0</text>
+<line x1="38" y1="140.0" x2="406" y2="140.0" stroke="#eef0f4" stroke-width="1"/>
+<text x="33" y="143.0" text-anchor="end" font-size="9.5" fill="#57606a">25</text>
+<line x1="38" y1="102.0" x2="406" y2="102.0" stroke="#eef0f4" stroke-width="1"/>
+<text x="33" y="105.0" text-anchor="end" font-size="9.5" fill="#57606a">50</text>
+<line x1="38" y1="64.0" x2="406" y2="64.0" stroke="#eef0f4" stroke-width="1"/>
+<text x="33" y="67.0" text-anchor="end" font-size="9.5" fill="#57606a">75</text>
+<line x1="38" y1="26.0" x2="406" y2="26.0" stroke="#eef0f4" stroke-width="1"/>
+<text x="33" y="29.0" text-anchor="end" font-size="9.5" fill="#57606a">100</text>
+<line x1="38" y1="48.8" x2="406" y2="48.8" stroke="#0969da" stroke-width="1" stroke-dasharray="3 3" opacity="0.7"/>
+<text x="404" y="46.8" text-anchor="end" font-size="9" fill="#0969da">target R=85</text>
+<line x1="38" y1="102.0" x2="406" y2="102.0" stroke="#dc2626" stroke-width="1" stroke-dasharray="3 3" opacity="0.7"/>
+<text x="404" y="100.0" text-anchor="end" font-size="9" fill="#dc2626">target P=50</text>
+<rect x="46.0" y="55.9" width="14" height="122.1" fill="#fff7da" stroke="#24292f" stroke-width="0.7"><title>v22 micro R = 80.32% · overseas test (v17+v22, hard T=0.4)</title></rect>
+<text x="53.0" y="53.9" text-anchor="middle" font-size="9" fill="#24292f">80.3</text>
+<rect x="64.0" y="93.0" width="14" height="85.0" fill="#fff7da" fill-opacity="0.45" stroke="#24292f" stroke-width="0.7" stroke-dasharray="2 2"><title>v22 micro P = 55.93% · overseas test (v17+v22, hard T=0.4)</title></rect>
+<text x="71.0" y="91.0" text-anchor="middle" font-size="9" fill="#24292f">55.9</text>
+<a href="#exp-v22"><text x="62.0" y="192.0" text-anchor="middle" font-size="10.5" font-weight="600" fill="#0969da">v22</text></a>
+<rect x="96.0" y="55.2" width="14" height="122.8" fill="#e8f5ff" stroke="#24292f" stroke-width="0.7"><title>v21 micro R = 80.76% · overseas test (v17+v21, hard T=0.3)</title></rect>
+<text x="103.0" y="53.2" text-anchor="middle" font-size="9" fill="#24292f">80.8</text>
+<rect x="114.0" y="94.2" width="14" height="83.8" fill="#e8f5ff" fill-opacity="0.45" stroke="#24292f" stroke-width="0.7" stroke-dasharray="2 2"><title>v21 micro P = 55.11% · overseas test (v17+v21, hard T=0.3)</title></rect>
+<text x="121.0" y="92.2" text-anchor="middle" font-size="9" fill="#24292f">55.1</text>
+<a href="#exp-v21"><text x="112.0" y="192.0" text-anchor="middle" font-size="10.5" font-weight="600" fill="#0969da">v21</text></a>
+<rect x="146.0" y="45.2" width="14" height="132.8" fill="#d9f5e1" stroke="#24292f" stroke-width="0.7"><title>v20 micro R = 87.37% · overseas test, no-TTA + T*</title></rect>
+<text x="153.0" y="43.2" text-anchor="middle" font-size="9" fill="#24292f">87.4</text>
+<rect x="164.0" y="87.1" width="14" height="90.9" fill="#d9f5e1" fill-opacity="0.45" stroke="#24292f" stroke-width="0.7" stroke-dasharray="2 2"><title>v20 micro P = 59.80% · overseas test, no-TTA + T*</title></rect>
+<text x="171.0" y="85.1" text-anchor="middle" font-size="9" fill="#24292f">59.8</text>
+<a href="#exp-v20"><text x="162.0" y="192.0" text-anchor="middle" font-size="10.5" font-weight="600" fill="#0969da">v20</text></a>
+<rect x="196.0" y="53.5" width="14" height="124.5" fill="#ebebfa" stroke="#24292f" stroke-width="0.7"><title>v17 micro R = 81.94% · overseas test, full-TTA + T*</title></rect>
+<text x="203.0" y="51.5" text-anchor="middle" font-size="9" fill="#24292f">81.9</text>
+<rect x="214.0" y="80.8" width="14" height="97.2" fill="#ebebfa" fill-opacity="0.45" stroke="#24292f" stroke-width="0.7" stroke-dasharray="2 2"><title>v17 micro P = 63.92% · overseas test, full-TTA + T*</title></rect>
+<text x="221.0" y="78.8" text-anchor="middle" font-size="9" fill="#24292f">63.9</text>
+<a href="#exp-v17"><text x="212.0" y="192.0" text-anchor="middle" font-size="10.5" font-weight="600" fill="#0969da">v17</text></a>
+<rect x="246.0" y="37.4" width="14" height="140.6" fill="#ffe0f0" stroke="#24292f" stroke-width="0.7"><title>v16 micro R = 92.47% · no-TTA baseline</title></rect>
+<text x="253.0" y="35.4" text-anchor="middle" font-size="9" fill="#24292f">92.5</text>
+<rect x="264.0" y="67.7" width="14" height="110.3" fill="#ffe0f0" fill-opacity="0.45" stroke="#24292f" stroke-width="0.7" stroke-dasharray="2 2"><title>v16 micro P = 72.58% · no-TTA baseline</title></rect>
+<text x="271.0" y="65.7" text-anchor="middle" font-size="9" fill="#24292f">72.6</text>
+<a href="#exp-v16"><text x="262.0" y="192.0" text-anchor="middle" font-size="10.5" font-weight="600" fill="#0969da">v16</text></a>
+<rect x="296.0" y="44.3" width="14" height="133.7" fill="#dceefd" stroke="#24292f" stroke-width="0.7"><title>v15 micro R = 87.96% · overseas test, full-TTA + T*</title></rect>
+<text x="303.0" y="42.3" text-anchor="middle" font-size="9" fill="#24292f">88.0</text>
+<rect x="314.0" y="87.8" width="14" height="90.2" fill="#dceefd" fill-opacity="0.45" stroke="#24292f" stroke-width="0.7" stroke-dasharray="2 2"><title>v15 micro P = 59.37% · overseas test, full-TTA + T*</title></rect>
+<text x="321.0" y="85.8" text-anchor="middle" font-size="9" fill="#24292f">59.4</text>
+<a href="#exp-v15"><text x="312.0" y="192.0" text-anchor="middle" font-size="10.5" font-weight="600" fill="#0969da">v15</text></a>
+<rect x="346.0" y="39.2" width="14" height="138.8" fill="#fff3dc" stroke="#24292f" stroke-width="0.7"><title>v13 micro R = 91.34% · full-TTA + T*</title></rect>
+<text x="353.0" y="37.2" text-anchor="middle" font-size="9" fill="#24292f">91.3</text>
+<rect x="364.0" y="77.2" width="14" height="100.8" fill="#fff3dc" fill-opacity="0.45" stroke="#24292f" stroke-width="0.7" stroke-dasharray="2 2"><title>v13 micro P = 66.31% · full-TTA + T*</title></rect>
+<text x="371.0" y="75.2" text-anchor="middle" font-size="9" fill="#24292f">66.3</text>
+<a href="#exp-v13"><text x="362.0" y="192.0" text-anchor="middle" font-size="10.5" font-weight="600" fill="#0969da">v13</text></a>
+<rect x="38" y="203" width="10" height="10" fill="#888"/>
+<text x="52" y="212" font-size="10.5" fill="#24292f">Recall</text>
+<rect x="108" y="203" width="10" height="10" fill="#888" fill-opacity="0.45" stroke="#24292f" stroke-width="0.7" stroke-dasharray="2 2"/>
+<text x="122" y="212" font-size="10.5" fill="#24292f">Precision</text>
+<text x="210.0" y="14" text-anchor="middle" font-size="11" font-weight="600" fill="#24292f">Overseas test — best variant per model</text>
+</svg></div>
+<div class="bar-chart-card"><h4>🟩 Combined (team ∪ overseas)</h4><p class="bc-hint">Best variant per model when both test sets are pooled.</p><svg class="bar-chart-svg" viewBox="0 0 420 220" xmlns="http://www.w3.org/2000/svg">
+<rect x="0" y="0" width="420" height="220" fill="#fff"/>
+<line x1="38" y1="178.0" x2="406" y2="178.0" stroke="#eef0f4" stroke-width="1"/>
+<text x="33" y="181.0" text-anchor="end" font-size="9.5" fill="#57606a">0</text>
+<line x1="38" y1="140.0" x2="406" y2="140.0" stroke="#eef0f4" stroke-width="1"/>
+<text x="33" y="143.0" text-anchor="end" font-size="9.5" fill="#57606a">25</text>
+<line x1="38" y1="102.0" x2="406" y2="102.0" stroke="#eef0f4" stroke-width="1"/>
+<text x="33" y="105.0" text-anchor="end" font-size="9.5" fill="#57606a">50</text>
+<line x1="38" y1="64.0" x2="406" y2="64.0" stroke="#eef0f4" stroke-width="1"/>
+<text x="33" y="67.0" text-anchor="end" font-size="9.5" fill="#57606a">75</text>
+<line x1="38" y1="26.0" x2="406" y2="26.0" stroke="#eef0f4" stroke-width="1"/>
+<text x="33" y="29.0" text-anchor="end" font-size="9.5" fill="#57606a">100</text>
+<line x1="38" y1="48.8" x2="406" y2="48.8" stroke="#0969da" stroke-width="1" stroke-dasharray="3 3" opacity="0.7"/>
+<text x="404" y="46.8" text-anchor="end" font-size="9" fill="#0969da">target R=85</text>
+<line x1="38" y1="102.0" x2="406" y2="102.0" stroke="#dc2626" stroke-width="1" stroke-dasharray="3 3" opacity="0.7"/>
+<text x="404" y="100.0" text-anchor="end" font-size="9" fill="#dc2626">target P=50</text>
+<rect x="46.0" y="43.9" width="14" height="134.1" fill="#e8f5ff" stroke="#24292f" stroke-width="0.7"><title>v21 micro R = 88.24% · v15+v21 COMBINED, no gate (baseline)</title></rect>
+<text x="53.0" y="41.9" text-anchor="middle" font-size="9" fill="#24292f">88.2</text>
+<rect x="64.0" y="125.3" width="14" height="52.7" fill="#e8f5ff" fill-opacity="0.45" stroke="#24292f" stroke-width="0.7" stroke-dasharray="2 2"><title>v21 micro P = 34.69% · v15+v21 COMBINED, no gate (baseline)</title></rect>
+<text x="71.0" y="123.3" text-anchor="middle" font-size="9" fill="#24292f">34.7</text>
+<a href="#exp-v21"><text x="62.0" y="192.0" text-anchor="middle" font-size="10.5" font-weight="600" fill="#0969da">v21</text></a>
+<rect x="96.0" y="49.0" width="14" height="129.0" fill="#d9f5e1" stroke="#24292f" stroke-width="0.7"><title>v20 micro R = 84.89% · COMBINED, no-TTA + T*</title></rect>
+<text x="103.0" y="47.0" text-anchor="middle" font-size="9" fill="#24292f">84.9</text>
+<rect x="114.0" y="101.0" width="14" height="77.0" fill="#d9f5e1" fill-opacity="0.45" stroke="#24292f" stroke-width="0.7" stroke-dasharray="2 2"><title>v20 micro P = 50.69% · COMBINED, no-TTA + T*</title></rect>
+<text x="121.0" y="99.0" text-anchor="middle" font-size="9" fill="#24292f">50.7</text>
+<a href="#exp-v20"><text x="112.0" y="192.0" text-anchor="middle" font-size="10.5" font-weight="600" fill="#0969da">v20</text></a>
+<rect x="146.0" y="56.2" width="14" height="121.8" fill="#ebebfa" stroke="#24292f" stroke-width="0.7"><title>v17 micro R = 80.11% · COMBINED, full-TTA + T*</title></rect>
+<text x="153.0" y="54.2" text-anchor="middle" font-size="9" fill="#24292f">80.1</text>
+<rect x="164.0" y="87.5" width="14" height="90.5" fill="#ebebfa" fill-opacity="0.45" stroke="#24292f" stroke-width="0.7" stroke-dasharray="2 2"><title>v17 micro P = 59.55% · COMBINED, full-TTA + T*</title></rect>
+<text x="171.0" y="85.5" text-anchor="middle" font-size="9" fill="#24292f">59.5</text>
+<a href="#exp-v17"><text x="162.0" y="192.0" text-anchor="middle" font-size="10.5" font-weight="600" fill="#0969da">v17</text></a>
+<rect x="196.0" y="51.4" width="14" height="126.6" fill="#dceefd" stroke="#24292f" stroke-width="0.7"><title>v15 micro R = 83.26% · COMBINED, full-TTA + T*</title></rect>
+<text x="203.0" y="49.4" text-anchor="middle" font-size="9" fill="#24292f">83.3</text>
+<rect x="214.0" y="97.4" width="14" height="80.6" fill="#dceefd" fill-opacity="0.45" stroke="#24292f" stroke-width="0.7" stroke-dasharray="2 2"><title>v15 micro P = 53.01% · COMBINED, full-TTA + T*</title></rect>
+<text x="221.0" y="95.4" text-anchor="middle" font-size="9" fill="#24292f">53.0</text>
+<a href="#exp-v15"><text x="212.0" y="192.0" text-anchor="middle" font-size="10.5" font-weight="600" fill="#0969da">v15</text></a>
+<rect x="38" y="203" width="10" height="10" fill="#888"/>
+<text x="52" y="212" font-size="10.5" fill="#24292f">Recall</text>
+<rect x="108" y="203" width="10" height="10" fill="#888" fill-opacity="0.45" stroke="#24292f" stroke-width="0.7" stroke-dasharray="2 2"/>
+<text x="122" y="212" font-size="10.5" fill="#24292f">Precision</text>
+<text x="210.0" y="14" text-anchor="middle" font-size="11" font-weight="600" fill="#24292f">Combined — best variant per model</text>
+</svg></div>
+<div class="bar-chart-card"><h4>🌐 Pareto view — every (R, P) point across all domains</h4><p class="bc-hint">▲ team · ■ overseas · ● combined. The green box is the customer target zone (R≥85 AND P≥50). Points in or near that zone are the candidates worth shipping.</p><svg class="bar-chart-svg" viewBox="0 0 720 320" xmlns="http://www.w3.org/2000/svg">
+<rect x="0" y="0" width="720" height="320" fill="#fff"/>
+<rect x="538.0" y="24" width="164.0" height="96.0" fill="#86efac" fill-opacity="0.18"/>
+<line x1="538.0" y1="24" x2="538.0" y2="280" stroke="#0969da" stroke-width="1" stroke-dasharray="3 3"/>
+<line x1="46" y1="120.0" x2="702" y2="120.0" stroke="#dc2626" stroke-width="1" stroke-dasharray="3 3"/>
+<text x="46.0" y="294" text-anchor="middle" font-size="9.5" fill="#57606a">40</text>
+<text x="155.3" y="294" text-anchor="middle" font-size="9.5" fill="#57606a">50</text>
+<text x="264.7" y="294" text-anchor="middle" font-size="9.5" fill="#57606a">60</text>
+<text x="374.0" y="294" text-anchor="middle" font-size="9.5" fill="#57606a">70</text>
+<text x="483.3" y="294" text-anchor="middle" font-size="9.5" fill="#57606a">80</text>
+<text x="592.7" y="294" text-anchor="middle" font-size="9.5" fill="#57606a">90</text>
+<text x="702.0" y="294" text-anchor="middle" font-size="9.5" fill="#57606a">100</text>
+<text x="41" y="283.0" text-anchor="end" font-size="9.5" fill="#57606a">0</text>
+<text x="41" y="219.0" text-anchor="end" font-size="9.5" fill="#57606a">20</text>
+<text x="41" y="155.0" text-anchor="end" font-size="9.5" fill="#57606a">40</text>
+<text x="41" y="91.0" text-anchor="end" font-size="9.5" fill="#57606a">60</text>
+<text x="41" y="27.0" text-anchor="end" font-size="9.5" fill="#57606a">80</text>
+<polygon points="412.4,131.9 407.4,140.9 417.4,140.9" fill="#fff7da" stroke="#24292f" stroke-width="0.8"><title>v22 team test (v17+v22, hard T=0.9) — R=73.51% P=44.72%</title></polygon>
+<polygon points="510.8,157.8 505.8,166.8 515.8,166.8" fill="#e8f5ff" stroke="#24292f" stroke-width="0.8"><title>v21 team test (v15+v21, hard T=0.9) — R=82.51% P=36.62%</title></polygon>
+<polygon points="486.4,161.0 481.4,170.0 491.4,170.0" fill="#e8f5ff" stroke="#24292f" stroke-width="0.8"><title>v21 team test (v17+v21, hard T=0.9) — R=80.28% P=35.62%</title></polygon>
+<polygon points="524.2,119.9 519.2,128.9 529.2,128.9" fill="#d9f5e1" stroke="#24292f" stroke-width="0.8"><title>v20 team test, no-TTA + T* — R=83.74% P=48.47%</title></polygon>
+<polygon points="549.4,147.6 544.4,156.6 554.4,156.6" fill="#d9f5e1" stroke="#24292f" stroke-width="0.8"><title>v20 team test, no-TTA baseline — R=86.04% P=39.82%</title></polygon>
+<polygon points="465.1,53.8 460.1,62.8 470.1,62.8" fill="#fff0d8" stroke="#24292f" stroke-width="0.8"><title>v19 no-TTA baseline — R=78.33% P=69.12%</title></polygon>
+<polygon points="465.1,53.8 460.1,62.8 470.1,62.8" fill="#fff0d8" stroke="#24292f" stroke-width="0.8"><title>v19 no-TTA + T* — R=78.33% P=69.12%</title></polygon>
+<polygon points="475.4,87.3 470.4,96.3 480.4,96.3" fill="#ebebfa" stroke="#24292f" stroke-width="0.8"><title>v17 team test, full-TTA + T* — R=79.27% P=58.65%</title></polygon>
+<polygon points="487.9,108.3 482.9,117.3 492.9,117.3" fill="#ebebfa" stroke="#24292f" stroke-width="0.8"><title>v17 team test, no-TTA + T* — R=80.42% P=52.08%</title></polygon>
+<polygon points="527.2,120.1 522.2,129.1 532.2,129.1" fill="#ebebfa" stroke="#24292f" stroke-width="0.8"><title>v17 team test, full-TTA baseline — R=84.01% P=48.40%</title></polygon>
+<polygon points="545.7,147.4 540.7,156.4 550.7,156.4" fill="#ebebfa" stroke="#24292f" stroke-width="0.8"><title>v17 team test, no-TTA baseline — R=85.70% P=39.88%</title></polygon>
+<polygon points="495.4,111.4 490.4,120.4 500.4,120.4" fill="#dceefd" stroke="#24292f" stroke-width="0.8"><title>v15 team test, full-TTA + T* — R=81.10% P=51.11%</title></polygon>
+<polygon points="544.2,144.0 539.2,153.0 549.2,153.0" fill="#dceefd" stroke="#24292f" stroke-width="0.8"><title>v15 team test, full-TTA baseline — R=85.57% P=40.94%</title></polygon>
+<polygon points="493.1,132.5 488.1,141.5 498.1,141.5" fill="#dceefd" stroke="#24292f" stroke-width="0.8"><title>v15 team test, no-TTA + T* — R=80.89% P=44.54%</title></polygon>
+<polygon points="560.5,168.3 555.5,177.3 565.5,177.3" fill="#dceefd" stroke="#24292f" stroke-width="0.8"><title>v15 team test, no-TTA baseline — R=87.06% P=33.33%</title></polygon>
+<polygon points="516.8,109.6 511.8,118.6 521.8,118.6" fill="#ececec" stroke="#24292f" stroke-width="0.8"><title>v12 full-TTA + T* — R=83.06% P=51.69%</title></polygon>
+<polygon points="559.0,132.3 554.0,141.3 564.0,141.3" fill="#ececec" stroke="#24292f" stroke-width="0.8"><title>v12 full-TTA baseline — R=86.92% P=44.58%</title></polygon>
+<polygon points="499.7,131.6 494.7,140.6 504.7,140.6" fill="#ececec" stroke="#24292f" stroke-width="0.8"><title>v12 no-TTA + T* — R=81.50% P=44.82%</title></polygon>
+<polygon points="580.5,160.2 575.5,169.2 585.5,169.2" fill="#ececec" stroke="#24292f" stroke-width="0.8"><title>v12 no-TTA baseline — R=88.89% P=35.86%</title></polygon>
+<rect x="482.8" y="97.0" width="8" height="8" fill="#fff7da" stroke="#24292f" stroke-width="0.8"><title>v22 overseas test (v17+v22, hard T=0.4) — R=80.32% P=55.93%</title></rect>
+<rect x="487.6" y="99.6" width="8" height="8" fill="#e8f5ff" stroke="#24292f" stroke-width="0.8"><title>v21 overseas test (v17+v21, hard T=0.3) — R=80.76% P=55.11%</title></rect>
+<rect x="447.5" y="99.2" width="8" height="8" fill="#e8f5ff" stroke="#24292f" stroke-width="0.8"><title>v21 overseas test (v15+v21, hard T=0.8) — R=77.09% P=55.26%</title></rect>
+<rect x="559.9" y="84.6" width="8" height="8" fill="#d9f5e1" stroke="#24292f" stroke-width="0.8"><title>v20 overseas test, no-TTA + T* — R=87.37% P=59.80%</title></rect>
+<rect x="561.6" y="93.2" width="8" height="8" fill="#d9f5e1" stroke="#24292f" stroke-width="0.8"><title>v20 overseas test, no-TTA baseline — R=87.52% P=57.14%</title></rect>
+<rect x="500.5" y="71.5" width="8" height="8" fill="#ebebfa" stroke="#24292f" stroke-width="0.8"><title>v17 overseas test, full-TTA + T* — R=81.94% P=63.92%</title></rect>
+<rect x="529.4" y="86.4" width="8" height="8" fill="#ebebfa" stroke="#24292f" stroke-width="0.8"><title>v17 overseas test, no-TTA + T* — R=84.58% P=59.26%</title></rect>
+<rect x="502.2" y="85.3" width="8" height="8" fill="#ebebfa" stroke="#24292f" stroke-width="0.8"><title>v17 overseas test, full-TTA baseline — R=82.09% P=59.59%</title></rect>
+<rect x="532.7" y="102.7" width="8" height="8" fill="#ebebfa" stroke="#24292f" stroke-width="0.8"><title>v17 overseas test, no-TTA baseline — R=84.88% P=54.17%</title></rect>
+<rect x="615.7" y="43.7" width="8" height="8" fill="#ffe0f0" stroke="#24292f" stroke-width="0.8"><title>v16 no-TTA baseline — R=92.47% P=72.58%</title></rect>
+<rect x="615.7" y="43.7" width="8" height="8" fill="#ffe0f0" stroke="#24292f" stroke-width="0.8"><title>v16 no-TTA + T* — R=92.47% P=72.58%</title></rect>
+<rect x="566.9" y="40.4" width="8" height="8" fill="#ffe0f0" stroke="#24292f" stroke-width="0.8"><title>v16 full-TTA baseline — R=88.01% P=73.64%</title></rect>
+<rect x="566.9" y="40.4" width="8" height="8" fill="#ffe0f0" stroke="#24292f" stroke-width="0.8"><title>v16 full-TTA + T* — R=88.01% P=73.64%</title></rect>
+<rect x="566.4" y="86.0" width="8" height="8" fill="#dceefd" stroke="#24292f" stroke-width="0.8"><title>v15 overseas test, full-TTA + T* — R=87.96% P=59.37%</title></rect>
+<rect x="566.4" y="93.1" width="8" height="8" fill="#dceefd" stroke="#24292f" stroke-width="0.8"><title>v15 overseas test, full-TTA baseline — R=87.96% P=57.16%</title></rect>
+<rect x="559.9" y="100.8" width="8" height="8" fill="#dceefd" stroke="#24292f" stroke-width="0.8"><title>v15 overseas test, no-TTA + T* — R=87.37% P=54.74%</title></rect>
+<rect x="590.4" y="129.2" width="8" height="8" fill="#dceefd" stroke="#24292f" stroke-width="0.8"><title>v15 overseas test, no-TTA baseline — R=90.16% P=45.89%</title></rect>
+<rect x="603.3" y="63.8" width="8" height="8" fill="#fff3dc" stroke="#24292f" stroke-width="0.8"><title>v13 full-TTA + T* — R=91.34% P=66.31%</title></rect>
+<rect x="603.3" y="66.5" width="8" height="8" fill="#fff3dc" stroke="#24292f" stroke-width="0.8"><title>v13 full-TTA baseline — R=91.34% P=65.47%</title></rect>
+<rect x="595.2" y="82.4" width="8" height="8" fill="#fff3dc" stroke="#24292f" stroke-width="0.8"><title>v13 no-TTA + T* — R=90.60% P=60.49%</title></rect>
+<rect x="616.1" y="96.2" width="8" height="8" fill="#fff3dc" stroke="#24292f" stroke-width="0.8"><title>v13 no-TTA baseline — R=92.51% P=56.20%</title></rect>
+<circle cx="573.4" cy="169.0" r="4.5" fill="#e8f5ff" stroke="#24292f" stroke-width="0.8"><title>v21 v15+v21 COMBINED, no gate (baseline) — R=88.24% P=34.69%</title></circle>
+<circle cx="488.6" cy="146.7" r="4.5" fill="#e8f5ff" stroke="#24292f" stroke-width="0.8"><title>v21 v15+v21 COMBINED, per-domain best gate — R=80.48% P=41.66%</title></circle>
+<circle cx="549.9" cy="167.7" r="4.5" fill="#e8f5ff" stroke="#24292f" stroke-width="0.8"><title>v21 v17+v21 COMBINED, no gate (baseline) — R=86.09% P=35.09%</title></circle>
+<circle cx="488.1" cy="151.6" r="4.5" fill="#e8f5ff" stroke="#24292f" stroke-width="0.8"><title>v21 v17+v21 COMBINED, per-domain best gate — R=80.44% P=40.12%</title></circle>
+<circle cx="536.8" cy="117.8" r="4.5" fill="#d9f5e1" stroke="#24292f" stroke-width="0.8"><title>v20 COMBINED, no-TTA + T* — R=84.89% P=50.69%</title></circle>
+<circle cx="554.5" cy="138.9" r="4.5" fill="#d9f5e1" stroke="#24292f" stroke-width="0.8"><title>v20 COMBINED, no-TTA baseline — R=86.51% P=44.09%</title></circle>
+<circle cx="484.5" cy="89.4" r="4.5" fill="#ebebfa" stroke="#24292f" stroke-width="0.8"><title>v17 COMBINED, full-TTA + T* — R=80.11% P=59.55%</title></circle>
+<circle cx="519.0" cy="110.4" r="4.5" fill="#dceefd" stroke="#24292f" stroke-width="0.8"><title>v15 COMBINED, full-TTA + T* — R=83.26% P=53.01%</title></circle>
+<text x="374.0" y="314" text-anchor="middle" font-size="11" font-weight="600" fill="#24292f">micro Recall (%)</text>
+<text x="14" y="152.0" text-anchor="middle" font-size="11" font-weight="600" fill="#24292f" transform="rotate(-90 14 152.0)">micro Precision (%)</text>
+<polygon points="54,30 50,37 58,37" fill="#888"/><text x="62" y="37" font-size="10" fill="#24292f">team</text>
+<rect x="104" y="30" width="8" height="8" fill="#888"/><text x="116" y="37" font-size="10" fill="#24292f">overseas</text>
+<circle cx="168.0" cy="34.0" r="4" fill="#888"/><text x="176" y="37" font-size="10" fill="#24292f">combined</text>
+<text x="542.0" y="34" font-size="10" font-weight="600" fill="#0a6e2e">target zone (R≥85 AND P≥50)</text>
+</svg></div>
+</div>
+<h2 id="consolidated" class="section-anchor">📋 Consolidated results</h2>
+<p>Sorted into three sections. <strong>Team test first</strong> (primary deployment target). ★ = combined-data models (v15/v17/v20) pinned at the top of each section, then by avg(R,P) descending. Partial / incomplete runs are filtered out.</p>
+<div class="domain-card team-card" id="consolidated-team-card">
+<h3 class="domain-header">🟦 Team test (primary)</h3>
+<table class="results" id="consolidated-team" style="width:100%;"><thead><tr><th data-key="group_name">Tier</th><th data-key="model_id">Model</th><th data-key="variant">Variant</th><th data-key="R">micro R</th><th data-key="P">micro P</th><th data-key="avg_RP">avg(R,P)</th><th data-key="mIoU">mIoU</th><th data-key="hits">85R/50P?</th></tr></thead><tbody><tr class="row-v22" style="background:#fff7da"><td></td><td><a href="#exp-v22">v22</a></td><td>team test (v17+v22, hard T=0.9)</td><td>73.51%</td><td>44.72%</td><td>59.12%</td><td>—</td><td></td></tr><tr class="row-v21" style="background:#e8f5ff"><td></td><td><a href="#exp-v21">v21</a></td><td>team test (v15+v21, hard T=0.9)</td><td>82.51%</td><td>36.62%</td><td>59.56%</td><td>—</td><td></td></tr><tr class="row-v21" style="background:#e8f5ff"><td></td><td><a href="#exp-v21">v21</a></td><td>team test (v17+v21, hard T=0.9)</td><td>80.28%</td><td>35.62%</td><td>57.95%</td><td>—</td><td></td></tr><tr class="row-v20 pinned" style="background:#d9f5e1"><td>★ combined</td><td><a href="#exp-v20">v20</a></td><td>team test, no-TTA + T*</td><td>83.74%</td><td>48.47%</td><td>66.10%</td><td>0.301</td><td></td></tr><tr class="row-v20 pinned" style="background:#d9f5e1"><td>★ combined</td><td><a href="#exp-v20">v20</a></td><td>team test, no-TTA baseline</td><td>86.04%</td><td>39.82%</td><td>62.93%</td><td>0.301</td><td></td></tr><tr class="row-v19" style="background:#fff0d8"><td></td><td><a href="#exp-v19">v19</a></td><td>no-TTA baseline</td><td>78.33%</td><td>69.12%</td><td>73.72%</td><td>0.528</td><td></td></tr><tr class="row-v19" style="background:#fff0d8"><td></td><td><a href="#exp-v19">v19</a></td><td>no-TTA + T*</td><td>78.33%</td><td>69.12%</td><td>73.72%</td><td>0.528</td><td></td></tr><tr class="row-v17 pinned" style="background:#ebebfa"><td>★ combined</td><td><a href="#exp-v17">v17</a></td><td>team test, full-TTA + T*</td><td>79.27%</td><td>58.65%</td><td>68.96%</td><td>0.348</td><td></td></tr><tr class="row-v17 pinned" style="background:#ebebfa"><td>★ combined</td><td><a href="#exp-v17">v17</a></td><td>team test, no-TTA + T*</td><td>80.42%</td><td>52.08%</td><td>66.25%</td><td>0.341</td><td></td></tr><tr class="row-v17 pinned" style="background:#ebebfa"><td>★ combined</td><td><a href="#exp-v17">v17</a></td><td>team test, full-TTA baseline</td><td>84.01%</td><td>48.40%</td><td>66.20%</td><td>0.348</td><td></td></tr><tr class="row-v17 pinned" style="background:#ebebfa"><td>★ combined</td><td><a href="#exp-v17">v17</a></td><td>team test, no-TTA baseline</td><td>85.70%</td><td>39.88%</td><td>62.79%</td><td>0.340</td><td></td></tr><tr class="row-v15 pinned" style="background:#dceefd"><td>★ combined</td><td><a href="#exp-v15">v15</a></td><td>team test, full-TTA + T*</td><td>81.10%</td><td>51.11%</td><td>66.10%</td><td>0.304</td><td></td></tr><tr class="row-v15 pinned" style="background:#dceefd"><td>★ combined</td><td><a href="#exp-v15">v15</a></td><td>team test, full-TTA baseline</td><td>85.57%</td><td>40.94%</td><td>63.25%</td><td>0.304</td><td></td></tr><tr class="row-v15 pinned" style="background:#dceefd"><td>★ combined</td><td><a href="#exp-v15">v15</a></td><td>team test, no-TTA + T*</td><td>80.89%</td><td>44.54%</td><td>62.72%</td><td>0.296</td><td></td></tr><tr class="row-v15 pinned" style="background:#dceefd"><td>★ combined</td><td><a href="#exp-v15">v15</a></td><td>team test, no-TTA baseline</td><td>87.06%</td><td>33.33%</td><td>60.20%</td><td>0.296</td><td></td></tr><tr class="row-v12 deprio" style="background:#ececec"><td>baseline</td><td><a href="#exp-v12">v12</a></td><td>full-TTA + T*</td><td>83.06%</td><td>51.69%</td><td>67.38%</td><td>0.346</td><td></td></tr><tr class="row-v12 deprio" style="background:#ececec"><td>baseline</td><td><a href="#exp-v12">v12</a></td><td>full-TTA baseline</td><td>86.92%</td><td>44.58%</td><td>65.75%</td><td>0.343</td><td></td></tr><tr class="row-v12 deprio" style="background:#ececec"><td>baseline</td><td><a href="#exp-v12">v12</a></td><td>no-TTA + T*</td><td>81.50%</td><td>44.82%</td><td>63.16%</td><td>0.333</td><td></td></tr><tr class="row-v12 deprio" style="background:#ececec"><td>baseline</td><td><a href="#exp-v12">v12</a></td><td>no-TTA baseline</td><td>88.89%</td><td>35.86%</td><td>62.38%</td><td>0.331</td><td></td></tr></tbody></table>
+</div>
+<div class="domain-card overseas-card" id="consolidated-overseas-card">
+<h3 class="domain-header">🟧 Overseas test</h3>
+<table class="results" id="consolidated-overseas" style="width:100%;"><thead><tr><th data-key="group_name">Tier</th><th data-key="model_id">Model</th><th data-key="variant">Variant</th><th data-key="R">micro R</th><th data-key="P">micro P</th><th data-key="avg_RP">avg(R,P)</th><th data-key="mIoU">mIoU</th><th data-key="hits">85R/50P?</th></tr></thead><tbody><tr class="row-v22" style="background:#fff7da"><td></td><td><a href="#exp-v22">v22</a></td><td>overseas test (v17+v22, hard T=0.4)</td><td>80.32%</td><td>55.93%</td><td>68.12%</td><td>—</td><td></td></tr><tr class="row-v21" style="background:#e8f5ff"><td></td><td><a href="#exp-v21">v21</a></td><td>overseas test (v17+v21, hard T=0.3)</td><td>80.76%</td><td>55.11%</td><td>67.94%</td><td>—</td><td></td></tr><tr class="row-v21" style="background:#e8f5ff"><td></td><td><a href="#exp-v21">v21</a></td><td>overseas test (v15+v21, hard T=0.8)</td><td>77.09%</td><td>55.26%</td><td>66.17%</td><td>—</td><td></td></tr><tr class="row-v20 hit pinned" style="background:#d9f5e1"><td>★ combined</td><td><a href="#exp-v20">v20</a></td><td>overseas test, no-TTA + T*</td><td>87.37%</td><td>59.80%</td><td>73.59%</td><td>0.312</td><td>✓</td></tr><tr class="row-v20 hit pinned" style="background:#d9f5e1"><td>★ combined</td><td><a href="#exp-v20">v20</a></td><td>overseas test, no-TTA baseline</td><td>87.52%</td><td>57.14%</td><td>72.33%</td><td>0.312</td><td>✓</td></tr><tr class="row-v17 pinned" style="background:#ebebfa"><td>★ combined</td><td><a href="#exp-v17">v17</a></td><td>overseas test, full-TTA + T*</td><td>81.94%</td><td>63.92%</td><td>72.93%</td><td>0.347</td><td></td></tr><tr class="row-v17 pinned" style="background:#ebebfa"><td>★ combined</td><td><a href="#exp-v17">v17</a></td><td>overseas test, no-TTA + T*</td><td>84.58%</td><td>59.26%</td><td>71.92%</td><td>0.336</td><td></td></tr><tr class="row-v17 pinned" style="background:#ebebfa"><td>★ combined</td><td><a href="#exp-v17">v17</a></td><td>overseas test, full-TTA baseline</td><td>82.09%</td><td>59.59%</td><td>70.84%</td><td>0.347</td><td></td></tr><tr class="row-v17 pinned" style="background:#ebebfa"><td>★ combined</td><td><a href="#exp-v17">v17</a></td><td>overseas test, no-TTA baseline</td><td>84.88%</td><td>54.17%</td><td>69.53%</td><td>0.336</td><td></td></tr><tr class="row-v16 hit" style="background:#ffe0f0"><td></td><td><a href="#exp-v16">v16</a></td><td>no-TTA baseline</td><td>92.47%</td><td>72.58%</td><td>82.53%</td><td>0.581</td><td>✓</td></tr><tr class="row-v16 hit" style="background:#ffe0f0"><td></td><td><a href="#exp-v16">v16</a></td><td>no-TTA + T*</td><td>92.47%</td><td>72.58%</td><td>82.53%</td><td>0.581</td><td>✓</td></tr><tr class="row-v16 hit" style="background:#ffe0f0"><td></td><td><a href="#exp-v16">v16</a></td><td>full-TTA baseline</td><td>88.01%</td><td>73.64%</td><td>80.83%</td><td>0.593</td><td>✓</td></tr><tr class="row-v16 hit" style="background:#ffe0f0"><td></td><td><a href="#exp-v16">v16</a></td><td>full-TTA + T*</td><td>88.01%</td><td>73.64%</td><td>80.83%</td><td>0.593</td><td>✓</td></tr><tr class="row-v15 hit pinned" style="background:#dceefd"><td>★ combined</td><td><a href="#exp-v15">v15</a></td><td>overseas test, full-TTA + T*</td><td>87.96%</td><td>59.37%</td><td>73.66%</td><td>0.325</td><td>✓</td></tr><tr class="row-v15 hit pinned" style="background:#dceefd"><td>★ combined</td><td><a href="#exp-v15">v15</a></td><td>overseas test, full-TTA baseline</td><td>87.96%</td><td>57.16%</td><td>72.56%</td><td>0.325</td><td>✓</td></tr><tr class="row-v15 hit pinned" style="background:#dceefd"><td>★ combined</td><td><a href="#exp-v15">v15</a></td><td>overseas test, no-TTA + T*</td><td>87.37%</td><td>54.74%</td><td>71.06%</td><td>0.303</td><td>✓</td></tr><tr class="row-v15 pinned" style="background:#dceefd"><td>★ combined</td><td><a href="#exp-v15">v15</a></td><td>overseas test, no-TTA baseline</td><td>90.16%</td><td>45.89%</td><td>68.03%</td><td>0.304</td><td></td></tr><tr class="row-v13 hit" style="background:#fff3dc"><td></td><td><a href="#exp-v13">v13</a></td><td>full-TTA + T*</td><td>91.34%</td><td>66.31%</td><td>78.83%</td><td>0.392</td><td>✓</td></tr><tr class="row-v13 hit" style="background:#fff3dc"><td></td><td><a href="#exp-v13">v13</a></td><td>full-TTA baseline</td><td>91.34%</td><td>65.47%</td><td>78.41%</td><td>0.392</td><td>✓</td></tr><tr class="row-v13 hit" style="background:#fff3dc"><td></td><td><a href="#exp-v13">v13</a></td><td>no-TTA + T*</td><td>90.60%</td><td>60.49%</td><td>75.55%</td><td>0.380</td><td>✓</td></tr><tr class="row-v13 hit" style="background:#fff3dc"><td></td><td><a href="#exp-v13">v13</a></td><td>no-TTA baseline</td><td>92.51%</td><td>56.20%</td><td>74.36%</td><td>0.381</td><td>✓</td></tr></tbody></table>
+</div>
+<div class="domain-card combined-card" id="consolidated-combined-card">
+<h3 class="domain-header">🟩 Combined (team ∪ overseas)</h3>
+<table class="results" id="consolidated-combined" style="width:100%;"><thead><tr><th data-key="group_name">Tier</th><th data-key="model_id">Model</th><th data-key="variant">Variant</th><th data-key="R">micro R</th><th data-key="P">micro P</th><th data-key="avg_RP">avg(R,P)</th><th data-key="mIoU">mIoU</th><th data-key="hits">85R/50P?</th></tr></thead><tbody><tr class="row-v21" style="background:#e8f5ff"><td></td><td><a href="#exp-v21">v21</a></td><td>v15+v21 COMBINED, no gate (baseline)</td><td>88.24%</td><td>34.69%</td><td>61.46%</td><td>—</td><td></td></tr><tr class="row-v21" style="background:#e8f5ff"><td></td><td><a href="#exp-v21">v21</a></td><td>v15+v21 COMBINED, per-domain best gate</td><td>80.48%</td><td>41.66%</td><td>61.07%</td><td>—</td><td></td></tr><tr class="row-v21" style="background:#e8f5ff"><td></td><td><a href="#exp-v21">v21</a></td><td>v17+v21 COMBINED, no gate (baseline)</td><td>86.09%</td><td>35.09%</td><td>60.59%</td><td>—</td><td></td></tr><tr class="row-v21" style="background:#e8f5ff"><td></td><td><a href="#exp-v21">v21</a></td><td>v17+v21 COMBINED, per-domain best gate</td><td>80.44%</td><td>40.12%</td><td>60.28%</td><td>—</td><td></td></tr><tr class="row-v20 hit pinned" style="background:#d9f5e1"><td>★ combined</td><td><a href="#exp-v20">v20</a></td><td>COMBINED, no-TTA + T*</td><td>84.89%</td><td>50.69%</td><td>67.79%</td><td>—</td><td>✓</td></tr><tr class="row-v20 pinned" style="background:#d9f5e1"><td>★ combined</td><td><a href="#exp-v20">v20</a></td><td>COMBINED, no-TTA baseline</td><td>86.51%</td><td>44.09%</td><td>65.30%</td><td>—</td><td></td></tr><tr class="row-v17 pinned" style="background:#ebebfa"><td>★ combined</td><td><a href="#exp-v17">v17</a></td><td>COMBINED, full-TTA + T*</td><td>80.11%</td><td>59.55%</td><td>69.83%</td><td>—</td><td></td></tr><tr class="row-v15 pinned" style="background:#dceefd"><td>★ combined</td><td><a href="#exp-v15">v15</a></td><td>COMBINED, full-TTA + T*</td><td>83.26%</td><td>53.01%</td><td>68.14%</td><td>—</td><td></td></tr></tbody></table>
+</div>
+<h2 id="experiments" class="section-anchor">🧪 Experiments</h2>
+<p>Latest experiments first. Each version has its own background tint so it's easy to track its rows across all tables.</p>
+<details class="exp" id="exp-v24" data-search="v24 — team train_no_leak re-split 80/10/10 wtg-disjoint v12 recipe with team train_no_leak re-split into 80/10/10 with 0 wtg overlap. tests performance under truly held-out turbine setting. does not &#x27;fix&#x27; v12; measures a different distribution. team wtg-disjoint v24 queued" data-id="v24" data-status="queued" style="background:#f3e8ff">
+<summary><span class="badge" style="background:#6c757d">QUEUED</span><span class="exp-name">v24 — team train_no_leak re-split 80/10/10 WTG-disjoint</span><span class="tag">team</span><span class="tag">wtg-disjoint</span><a class="anchor" href="#exp-v24" title="link">🔗</a></summary>
+<div class="section"><h4>Purpose</h4><p>v12 recipe with team train_no_leak re-split into 80/10/10 with 0 WTG overlap. Tests performance under truly held-out turbine setting. Does NOT &#x27;fix&#x27; v12; measures a different distribution.</p></div>
+<div class="section"><h4>Training data</h4><table class="kv"><tr><th>train_size</th><td>7737</td></tr><tr><th>val_size</th><td>961</td></tr><tr><th>test_size</th><td>866</td></tr><tr><th>labeler</th><td>team</td></tr></table></div>
+</details>
+<details class="exp" id="exp-v23" data-search="v23 — overseas lab cracks size-matched to v19 train another overseas lab cracks model with the same train size as v19 (544 ≈ 531). decouples labeler-style from data-size effects. v23 vs v19 = labeler-only a/b; v23 vs v16 = size-only a/b within same labeler set. overseas cracks-only lab-labelers size-matched v23 queued" data-id="v23" data-status="queued" style="background:#ffe8e8">
+<summary><span class="badge" style="background:#6c757d">QUEUED</span><span class="exp-name">v23 — overseas lab Cracks size-matched to v19</span><span class="tag">overseas</span><span class="tag">cracks-only</span><span class="tag">lab-labelers</span><span class="tag">size-matched</span><a class="anchor" href="#exp-v23" title="link">🔗</a></summary>
+<div class="section"><h4>Purpose</h4><p>Train another overseas lab Cracks model with the SAME train size as v19 (544 ≈ 531). Decouples labeler-style from data-size effects. v23 vs v19 = labeler-only A/B; v23 vs v16 = size-only A/B within same labeler set.</p></div>
+<div class="section"><h4>Training data</h4><table class="kv"><tr><th>train_size</th><td>544</td></tr><tr><th>val_size</th><td>44</td></tr><tr><th>test_size</th><td>72</td></tr><tr><th>labeler</th><td>overseas lab</td></tr><tr><th>scope</th><td>La_Crack + Bond_Crack only (remasked)</td></tr></table></div>
+</details>
+<details class="exp" id="exp-v22" data-search="v22 — swin-t tile classifier (vit alternative cascade) same role as v21 but vit-based backbone. direct a/b vs v21 holding everything else constant. cascade stage-1 swin-t vit v22 eval_in_progress" data-id="v22" data-status="eval_in_progress" style="background:#fff7da">
+<summary><span class="badge" style="background:#d6a000">EVAL IN PROGRESS</span><span class="exp-name">v22 — Swin-T tile classifier (ViT alternative cascade)</span><span class="tag">cascade</span><span class="tag">stage-1</span><span class="tag">swin-t</span><span class="tag">vit</span><a class="anchor" href="#exp-v22" title="link">🔗</a></summary>
+<div class="section"><h4>Purpose</h4><p>Same role as v21 but ViT-based backbone. Direct A/B vs v21 holding everything else constant.</p></div>
+<div class="section"><h4>Training data</h4><table class="kv"><tr><th>source</th><td>Same as v21</td></tr></table></div>
+<div class="section"><h4>Recipe</h4><table class="kv"><tr><th>backbone</th><td>Swin-Tiny (timm, ImageNet pretrained, ~28M params)</td></tr><tr><th>input_size</th><td>1008×1008 native</td></tr><tr><th>iters</th><td>20,000</td></tr></table></div>
+<div class="section"><h4>Results</h4><table class="results"><thead><tr><th>variant</th><th>mIoU</th><th>R</th><th>P</th><th>copy</th></tr></thead><tbody><tr><td>team test (v17+v22, hard T=0.9)</td><td></td><td>73.51%</td><td>44.72%</td><td><button class="copy-btn" data-text="team test (v17+v22, hard T=0.9),None,73.51,44.72">📋</button></td></tr><tr><td>overseas test (v17+v22, hard T=0.4)</td><td></td><td>80.32%</td><td>55.93%</td><td><button class="copy-btn" data-text="overseas test (v17+v22, hard T=0.4),None,80.32,55.93">📋</button></td></tr></tbody></table></div>
+<div class="section"><h4>Cascade results</h4><table class="results"><thead><tr><th>pair</th><th>baseline_R</th><th>baseline_P</th><th>best_mode</th><th>best_T_gate</th><th>best_R</th><th>best_P</th><th>status</th><th>copy</th></tr></thead><tbody><tr><td>v17 + v22 on team test</td><td>87.94%</td><td>29.75%</td><td>hard</td><td>0.9000</td><td>73.51%</td><td>44.72%</td><td></td><td><button class="copy-btn" data-text="v17 + v22 on team test,87.94,29.75,hard,0.9,73.51,44.72,">📋</button></td></tr><tr><td>v17 + v22 on overseas test</td><td>82.97%</td><td>52.85%</td><td>hard</td><td>0.4000</td><td>80.32%</td><td>55.93%</td><td></td><td><button class="copy-btn" data-text="v17 + v22 on overseas test,82.97,52.85,hard,0.4,80.32,55.93,">📋</button></td></tr><tr><td>v15 + v22 on overseas test</td><td></td><td></td><td></td><td></td><td></td><td></td><td>running (started 09:58 KST June 5)</td><td><button class="copy-btn" data-text="v15 + v22 on overseas test,,,,,,,running (started 09:58 KST June 5)">📋</button></td></tr></tbody></table></div>
+<div class="section caveat"><h4>Caveats</h4><p>[&#x27;v15+v22 team-test eval still in progress (1,005/3,083 imgs); excluded until full to avoid biased numbers&#x27;]</p></div>
+<div class="section"><h4>Take-away</h4><p>Swin-T cascade landed similar precision lift to EfficientNet but with WORSE recall on team (73.5% vs v21&#x27;s 80.3%). ViT didn&#x27;t dramatically improve over CNN for tile-level binary task. Final v15+v22 pairs pending.</p></div>
+</details>
+<details class="exp" id="exp-v21" data-search="v21 — efficientnet-b0 tile classifier (cascade stage 1) standalone tile-level binary classifier as the first stage of a two-stage cascade. trained on v17&#x27;s tile manifest (defect=1, bg=0). at inference, gates v17/v15&#x27;s per-tile segmentation predictions. cascade stage-1 efficientnet v21 done" data-id="v21" data-status="done" style="background:#e8f5ff">
+<summary><span class="badge" style="background:#3d8b3d">DONE</span><span class="exp-name">v21 — EfficientNet-B0 tile classifier (cascade stage 1)</span><span class="tag">cascade</span><span class="tag">stage-1</span><span class="tag">efficientnet</span><a class="anchor" href="#exp-v21" title="link">🔗</a></summary>
+<div class="section"><h4>Purpose</h4><p>Standalone tile-level binary classifier as the first stage of a two-stage cascade. Trained on v17&#x27;s tile manifest (defect=1, BG=0). At inference, gates v17/v15&#x27;s per-tile segmentation predictions.</p></div>
+<div class="section"><h4>Training data</h4><table class="kv"><tr><th>source</th><td>v17 tile manifest (defect + BG, combined team+overseas)</td></tr></table></div>
+<div class="section"><h4>Recipe</h4><table class="kv"><tr><th>backbone</th><td>EfficientNet-B0 (torchvision, ImageNet pretrained)</td></tr><tr><th>head</th><td>GAP → Dropout(0.2) → Linear(1280, 1)</td></tr><tr><th>loss</th><td>BCE-with-logits + pos_weight balancing</td></tr><tr><th>iters</th><td>20,000 DDP-2</td></tr><tr><th>input_size</th><td>1008×1008 native</td></tr></table></div>
+<div class="section"><h4>Results</h4><table class="results"><thead><tr><th>variant</th><th>mIoU</th><th>R</th><th>P</th><th>note</th><th>copy</th></tr></thead><tbody><tr><td>v17+v21 COMBINED, no gate (baseline)</td><td></td><td>86.09%</td><td>35.09%</td><td></td><td><button class="copy-btn" data-text="v17+v21 COMBINED, no gate (baseline),None,86.09,35.09,">📋</button></td></tr><tr><td>v17+v21 COMBINED, per-domain best gate</td><td></td><td>80.44%</td><td>40.12%</td><td></td><td><button class="copy-btn" data-text="v17+v21 COMBINED, per-domain best gate,None,80.44,40.12,">📋</button></td></tr><tr><td>v15+v21 COMBINED, no gate (baseline)</td><td></td><td>88.24%</td><td>34.69%</td><td>micro across full team (3,083) + overseas (529) test imgs · gate disabled (every tile passes)</td><td><button class="copy-btn" data-text="v15+v21 COMBINED, no gate (baseline),None,88.24,34.69,micro across full team (3,083) + overseas (529) test imgs · gate disabled (every tile passes)">📋</button></td></tr><tr><td>v15+v21 COMBINED, per-domain best gate</td><td></td><td>80.48%</td><td>41.66%</td><td>team uses hard T=0.9, overseas uses hard T=0.8 — picked per domain, micro pooled across both</td><td><button class="copy-btn" data-text="v15+v21 COMBINED, per-domain best gate,None,80.48,41.66,team uses hard T=0.9, overseas uses hard T=0.8 — picked per domain, micro pooled across both">📋</button></td></tr><tr><td>team test (v17+v21, hard T=0.9)</td><td></td><td>80.28%</td><td>35.62%</td><td></td><td><button class="copy-btn" data-text="team test (v17+v21, hard T=0.9),None,80.28,35.62,">📋</button></td></tr><tr><td>overseas test (v17+v21, hard T=0.3)</td><td></td><td>80.76%</td><td>55.11%</td><td></td><td><button class="copy-btn" data-text="overseas test (v17+v21, hard T=0.3),None,80.76,55.11,">📋</button></td></tr><tr><td>team test (v15+v21, hard T=0.9)</td><td></td><td>82.51%</td><td>36.62%</td><td>full 3,083 team-test imgs · 75.4% tiles gated out by stage-1</td><td><button class="copy-btn" data-text="team test (v15+v21, hard T=0.9),None,82.51,36.62,full 3,083 team-test imgs · 75.4% tiles gated out by stage-1">📋</button></td></tr><tr><td>overseas test (v15+v21, hard T=0.8)</td><td></td><td>77.09%</td><td>55.26%</td><td></td><td><button class="copy-btn" data-text="overseas test (v15+v21, hard T=0.8),None,77.09,55.26,">📋</button></td></tr></tbody></table></div>
+<div class="section"><h4>Stage-1 standalone (tile-level)</h4><table class="kv"><tr><th>AUROC</th><td>0.768</td></tr><tr><th>AUPR</th><td>0.072</td></tr><tr><th>R_at_0.5</th><td>5.6</td></tr><tr><th>P_at_0.5</th><td>82.1</td></tr><tr><th>F1_at_0.5</th><td>0.1</td></tr></table></div>
+<div class="section"><h4>Cascade results</h4><table class="results"><thead><tr><th>pair</th><th>baseline_R</th><th>baseline_P</th><th>best_mode</th><th>best_T_gate</th><th>best_R</th><th>best_P</th><th>records</th><th>best_t_gate</th><th>partial</th><th>copy</th></tr></thead><tbody><tr><td>v17 + v21 on team test</td><td>87.74%</td><td>30.51%</td><td>hard</td><td>0.9000</td><td>80.28%</td><td>35.62%</td><td></td><td></td><td></td><td><button class="copy-btn" data-text="v17 + v21 on team test,87.74,30.51,hard,0.9,80.28,35.62,,,">📋</button></td></tr><tr><td>v17 + v21 on overseas test</td><td>82.53%</td><td>53.68%</td><td>hard</td><td>0.3000</td><td>80.76%</td><td>55.11%</td><td></td><td></td><td></td><td><button class="copy-btn" data-text="v17 + v21 on overseas test,82.53,53.68,hard,0.3,80.76,55.11,,,">📋</button></td></tr><tr><td>v15 + v21 on team test</td><td>90.25%</td><td>29.60%</td><td>hard</td><td>0.9000</td><td>82.51%</td><td>36.62%</td><td>3083</td><td>0.9000</td><td>False</td><td><button class="copy-btn" data-text="v15 + v21 on team test,90.25,29.6,hard,0.9,82.51,36.62,3083,0.9,False">📋</button></td></tr><tr><td>v15 + v21 on overseas test</td><td>84.88%</td><td>49.96%</td><td>hard</td><td>0.8000</td><td>77.09%</td><td>55.26%</td><td></td><td></td><td></td><td><button class="copy-btn" data-text="v15 + v21 on overseas test,84.88,49.96,hard,0.8,77.09,55.26,,,">📋</button></td></tr></tbody></table></div>
+<div class="section"><h4>Take-away</h4><p>Cascade gating gave modest precision lift (~5 pp) at the cost of 5-8 pp recall. Stage-1 EfficientNet was too weak a ranker (AUROC 0.77, AUPR 0.07) given tile-level class imbalance (only 2.7% defect tiles). Net F1 slightly worse than v17/v15 alone. v22 (Swin-T) may rank better.</p></div>
+</details>
+<details class="exp" id="exp-v20" data-search="v20 — combined model + auxiliary defect-classification head v17 architecture + a new tile-level binary &#x27;is this tile defect?&#x27; classification head, jointly trained with seg head. aux loss is 0.1× bce on the aux logit. intended for inference-time gating (mode a soft multiply or mode b hard gate) to reduce fps on empty tiles. combined multi-task v20 done" data-id="v20" data-status="done" style="background:#d9f5e1">
+<summary><span class="badge" style="background:#3d8b3d">DONE</span><span class="exp-name">v20 — combined model + auxiliary defect-classification head</span><span class="tag">combined</span><span class="tag">multi-task</span><a class="anchor" href="#exp-v20" title="link">🔗</a></summary>
+<div class="section"><h4>Purpose</h4><p>v17 architecture + a new tile-level binary &#x27;is this tile defect?&#x27; classification head, jointly trained with seg head. Aux loss is 0.1× BCE on the aux logit. Intended for inference-time gating (Mode A soft multiply or Mode B hard gate) to reduce FPs on empty tiles.</p></div>
+<div class="section"><h4>Training data</h4><table class="kv"><tr><th>source</th><td>Same as v17</td></tr><tr><th>labeler</th><td>team + overseas</td></tr><tr><th>scope</th><td>all 8 defect classes</td></tr></table></div>
+<div class="section"><h4>Recipe</h4><table class="kv"><tr><th>loss</th><td>CWCE + Dice + 0.1 × BCE(aux_logit, has_any_defect_pixel)</td></tr><tr><th>head</th><td>SegformerHeadWithAux (existing seg branch + new aux branch: GAP → MLP → 1 logit)</td></tr><tr><th>iters</th><td>30,000 DDP-2</td></tr><tr><th>warm_start</th><td>v17 iter_30000.pth</td></tr></table></div>
+<div class="section"><h4>Results</h4><table class="results"><thead><tr><th>variant</th><th>mIoU</th><th>R</th><th>P</th><th>copy</th></tr></thead><tbody><tr><td>team test, no-TTA baseline</td><td>0.3010</td><td>86.04%</td><td>39.82%</td><td><button class="copy-btn" data-text="team test, no-TTA baseline,0.301,86.04,39.82">📋</button></td></tr><tr><td>team test, no-TTA + T*</td><td>0.3011</td><td>83.74%</td><td>48.47%</td><td><button class="copy-btn" data-text="team test, no-TTA + T*,0.3010522432148645,83.74,48.47">📋</button></td></tr><tr class="hit"><td>overseas test, no-TTA baseline</td><td>0.3120</td><td>87.52%</td><td>57.14%</td><td><button class="copy-btn" data-text="overseas test, no-TTA baseline,0.312,87.52,57.14">📋</button></td></tr><tr class="hit"><td>overseas test, no-TTA + T*</td><td>0.3118</td><td>87.37%</td><td>59.80%</td><td><button class="copy-btn" data-text="overseas test, no-TTA + T*,0.311845440172937,87.37,59.8">📋</button></td></tr><tr><td>COMBINED, no-TTA baseline</td><td></td><td>86.51%</td><td>44.09%</td><td><button class="copy-btn" data-text="COMBINED, no-TTA baseline,None,86.51,44.09">📋</button></td></tr><tr class="hit"><td>COMBINED, no-TTA + T*</td><td></td><td>84.89%</td><td>50.69%</td><td><button class="copy-btn" data-text="COMBINED, no-TTA + T*,None,84.89,50.69">📋</button></td></tr></tbody></table></div>
+<div class="section"><h4>Pending</h4><ul><li>full-TTA + T* not run</li><li>aux-gated inference (Mode A soft / Mode B hard) not run — would use the aux head currently silently discarded</li></ul></div>
+</details>
+<details class="exp" id="exp-v19" data-search="v19 — team cracks remasked (apples-to-apples vs v16) sample team images containing cracks, remask to keep only la_crack + bond_crack pixels, match v16&#x27;s class ratio. isolates labeler-style effect at constrained scope. team cracks-only v19 done" data-id="v19" data-status="done" style="background:#fff0d8">
+<summary><span class="badge" style="background:#3d8b3d">DONE</span><span class="exp-name">v19 — team Cracks remasked (apples-to-apples vs v16)</span><span class="tag">team</span><span class="tag">cracks-only</span><a class="anchor" href="#exp-v19" title="link">🔗</a></summary>
+<div class="section"><h4>Purpose</h4><p>Sample team images containing Cracks, REMASK to keep only La_Crack + Bond_Crack pixels, match v16&#x27;s class ratio. Isolates labeler-style effect at constrained scope.</p></div>
+<div class="section"><h4>Training data</h4><table class="kv"><tr><th>source</th><td>team Crack-containing images (remasked)</td></tr><tr><th>train_size</th><td>531</td></tr><tr><th>val_size</th><td>44</td></tr><tr><th>test_size</th><td>60</td></tr><tr><th>labeler</th><td>team</td></tr><tr><th>scope</th><td>La_Crack + Bond_Crack only (other classes zeroed in masks)</td></tr></table></div>
+<div class="section"><h4>Recipe</h4><table class="kv"><tr><th>loss</th><td>CWCE + Dice</td></tr><tr><th>iters</th><td>30,000 DDP-2</td></tr><tr><th>tiles</th><td>--n-bg=3</td></tr></table></div>
+<div class="section"><h4>Results</h4><table class="results"><thead><tr><th>variant</th><th>mIoU</th><th>R</th><th>P</th><th>copy</th></tr></thead><tbody><tr><td>no-TTA baseline</td><td>0.5280</td><td>78.33%</td><td>69.12%</td><td><button class="copy-btn" data-text="no-TTA baseline,0.528,78.33,69.12">📋</button></td></tr><tr><td>no-TTA + T*</td><td>0.5283</td><td>78.33%</td><td>69.12%</td><td><button class="copy-btn" data-text="no-TTA + T*,0.5282528016658482,78.33,69.12">📋</button></td></tr></tbody></table></div>
+<div class="section"><h4>Per-class (no-TTA + T*)</h4><table class="results"><thead><tr><th>class</th><th>TP</th><th>FP</th><th>FN</th><th>R</th><th>P</th><th>copy</th></tr></thead><tbody><tr><td>la_crack</td><td>29</td><td>12</td><td>9</td><td>76.30%</td><td>70.70%</td><td><button class="copy-btn" data-text="la_crack,29,12,9,76.3,70.7">📋</button></td></tr><tr><td>bond_crack</td><td>18</td><td>9</td><td>4</td><td>81.80%</td><td>66.70%</td><td><button class="copy-btn" data-text="bond_crack,18,9,4,81.8,66.7">📋</button></td></tr></tbody></table></div>
+</details>
+<details class="exp" id="exp-v17" data-search="v17 — combined + 2× bg tile sampling v15 architecture but bg-tile sampling doubled (--n-bg=6 vs v15&#x27;s 3). tests whether more clean-blade exposure during training reduces fps. combined ablation-2xbg v17 done" data-id="v17" data-status="done" style="background:#ebebfa">
+<summary><span class="badge" style="background:#3d8b3d">DONE</span><span class="exp-name">v17 — combined + 2× BG tile sampling</span><span class="tag">combined</span><span class="tag">ablation-2xBG</span><a class="anchor" href="#exp-v17" title="link">🔗</a></summary>
+<div class="section"><h4>Purpose</h4><p>v15 architecture but BG-tile sampling doubled (--n-bg=6 vs v15&#x27;s 3). Tests whether more clean-blade exposure during training reduces FPs.</p></div>
+<div class="section"><h4>Training data</h4><table class="kv"><tr><th>source</th><td>Same as v15 (team_no_leak + overseas merged)</td></tr><tr><th>test_sets</th><td>team test_diuid_10; overseas_only_test</td></tr><tr><th>labeler</th><td>team + overseas</td></tr><tr><th>scope</th><td>all 8 defect classes</td></tr></table></div>
+<div class="section"><h4>Recipe</h4><table class="kv"><tr><th>loss</th><td>CWCE + Dice</td></tr><tr><th>backbone</th><td>SAM 3.1 LoRA r=8</td></tr><tr><th>iters</th><td>30,000 DDP-2</td></tr><tr><th>tiles</th><td>--n-bg=6 (46,616 defect + 60,067 BG tiles/epoch; BG share 56% of batch)</td></tr><tr><th>blade_mask_fix</th><td>patched load_blade_mask for overseas paths</td></tr></table></div>
+<div class="section"><h4>Results</h4><table class="results"><thead><tr><th>variant</th><th>mIoU</th><th>R</th><th>P</th><th>copy</th></tr></thead><tbody><tr><td>team test, no-TTA baseline</td><td>0.3400</td><td>85.70%</td><td>39.88%</td><td><button class="copy-btn" data-text="team test, no-TTA baseline,0.34,85.7,39.88">📋</button></td></tr><tr><td>team test, no-TTA + T*</td><td>0.3407</td><td>80.42%</td><td>52.08%</td><td><button class="copy-btn" data-text="team test, no-TTA + T*,0.3407178862764466,80.42,52.08">📋</button></td></tr><tr><td>team test, full-TTA baseline</td><td>0.3480</td><td>84.01%</td><td>48.40%</td><td><button class="copy-btn" data-text="team test, full-TTA baseline,0.348,84.01,48.4">📋</button></td></tr><tr><td>team test, full-TTA + T*</td><td>0.3481</td><td>79.27%</td><td>58.65%</td><td><button class="copy-btn" data-text="team test, full-TTA + T*,0.3480971644082439,79.27,58.65">📋</button></td></tr><tr><td>overseas test, no-TTA baseline</td><td>0.3360</td><td>84.88%</td><td>54.17%</td><td><button class="copy-btn" data-text="overseas test, no-TTA baseline,0.336,84.88,54.17">📋</button></td></tr><tr><td>overseas test, no-TTA + T*</td><td>0.3357</td><td>84.58%</td><td>59.26%</td><td><button class="copy-btn" data-text="overseas test, no-TTA + T*,0.335720736545507,84.58,59.26">📋</button></td></tr><tr><td>overseas test, full-TTA baseline</td><td>0.3470</td><td>82.09%</td><td>59.59%</td><td><button class="copy-btn" data-text="overseas test, full-TTA baseline,0.347,82.09,59.59">📋</button></td></tr><tr><td>overseas test, full-TTA + T*</td><td>0.3468</td><td>81.94%</td><td>63.92%</td><td><button class="copy-btn" data-text="overseas test, full-TTA + T*,0.34680911853871277,81.94,63.92">📋</button></td></tr><tr><td>COMBINED, full-TTA + T*</td><td></td><td>80.11%</td><td>59.55%</td><td><button class="copy-btn" data-text="COMBINED, full-TTA + T*,None,80.11,59.55">📋</button></td></tr></tbody></table></div>
+</details>
+<details class="exp" id="exp-v16" data-search="v16 — overseas lab cracks specialist trained only on overseas lab-labeler images (cracks-only scope by labeler task type). tests how a cracks specialist trained on lab labels performs on its native distribution. overseas cracks-only lab-labelers v16 done" data-id="v16" data-status="done" style="background:#ffe0f0">
+<summary><span class="badge" style="background:#3d8b3d">DONE</span><span class="exp-name">v16 — overseas lab Cracks specialist</span><span class="tag">overseas</span><span class="tag">cracks-only</span><span class="tag">lab-labelers</span><a class="anchor" href="#exp-v16" title="link">🔗</a></summary>
+<div class="section"><h4>Purpose</h4><p>Trained only on overseas lab-labeler images (Cracks-only scope by labeler task type). Tests how a Cracks specialist trained on lab labels performs on its native distribution.</p></div>
+<div class="section"><h4>Training data</h4><table class="kv"><tr><th>source</th><td>overseas lab labelers (2,993 train / 345 val / 303 test)</td></tr><tr><th>labeler</th><td>overseas lab</td></tr><tr><th>scope</th><td>La_Crack + Bond_Crack only</td></tr></table></div>
+<div class="section"><h4>Recipe</h4><table class="kv"><tr><th>loss</th><td>CWCE + Dice</td></tr><tr><th>backbone</th><td>SAM 3.1 LoRA r=8</td></tr><tr><th>iters</th><td>30,000 DDP-2</td></tr><tr><th>tiles</th><td>--n-bg=3</td></tr></table></div>
+<div class="section"><h4>Results</h4><table class="results"><thead><tr><th>variant</th><th>mIoU</th><th>R</th><th>P</th><th>copy</th></tr></thead><tbody><tr class="hit"><td>no-TTA baseline</td><td>0.5810</td><td>92.47%</td><td>72.58%</td><td><button class="copy-btn" data-text="no-TTA baseline,0.581,92.47,72.58">📋</button></td></tr><tr class="hit"><td>no-TTA + T*</td><td>0.5806</td><td>92.47%</td><td>72.58%</td><td><button class="copy-btn" data-text="no-TTA + T*,0.5805769529204786,92.47,72.58">📋</button></td></tr><tr class="hit"><td>full-TTA baseline</td><td>0.5930</td><td>88.01%</td><td>73.64%</td><td><button class="copy-btn" data-text="full-TTA baseline,0.593,88.01,73.64">📋</button></td></tr><tr class="hit"><td>full-TTA + T*</td><td>0.5934</td><td>88.01%</td><td>73.64%</td><td><button class="copy-btn" data-text="full-TTA + T*,0.5933787025291458,88.01,73.64">📋</button></td></tr></tbody></table></div>
+</details>
+<details class="exp" id="exp-v15" data-search="v15 — combined team + overseas v8 recipe trained on combined team_no_leak + overseas merged. evaluated separately on each test set. combined all-classes v15 done" data-id="v15" data-status="done" style="background:#dceefd">
+<summary><span class="badge" style="background:#3d8b3d">DONE</span><span class="exp-name">v15 — combined team + overseas</span><span class="tag">combined</span><span class="tag">all-classes</span><a class="anchor" href="#exp-v15" title="link">🔗</a></summary>
+<div class="section"><h4>Purpose</h4><p>v8 recipe trained on combined team_no_leak + overseas merged. Evaluated separately on each test set.</p></div>
+<div class="section"><h4>Training data</h4><table class="kv"><tr><th>source</th><td>team train_no_leak (9,564) + overseas merged (6,559) = 16,123</td></tr><tr><th>test_sets</th><td>team test_diuid_10 (3083); overseas_only_test (720)</td></tr><tr><th>labeler</th><td>team + overseas</td></tr><tr><th>scope</th><td>all 8 defect classes</td></tr></table></div>
+<div class="section"><h4>Recipe</h4><table class="kv"><tr><th>loss</th><td>CWCE + Dice</td></tr><tr><th>backbone</th><td>SAM 3.1 LoRA r=8</td></tr><tr><th>iters</th><td>30,000 DDP-2</td></tr><tr><th>tiles</th><td>--n-bg=3 (49,398 team + 32,111 overseas tiles/epoch)</td></tr><tr><th>warm_start</th><td>v1</td></tr></table></div>
+<div class="section"><h4>Results</h4><table class="results"><thead><tr><th>variant</th><th>mIoU</th><th>R</th><th>P</th><th>copy</th></tr></thead><tbody><tr><td>team test, no-TTA baseline</td><td>0.2960</td><td>87.06%</td><td>33.33%</td><td><button class="copy-btn" data-text="team test, no-TTA baseline,0.296,87.06,33.33">📋</button></td></tr><tr><td>team test, no-TTA + T*</td><td>0.2964</td><td>80.89%</td><td>44.54%</td><td><button class="copy-btn" data-text="team test, no-TTA + T*,0.296426438134046,80.89,44.54">📋</button></td></tr><tr><td>team test, full-TTA baseline</td><td>0.3040</td><td>85.57%</td><td>40.94%</td><td><button class="copy-btn" data-text="team test, full-TTA baseline,0.304,85.57,40.94">📋</button></td></tr><tr><td>team test, full-TTA + T*</td><td>0.3039</td><td>81.10%</td><td>51.11%</td><td><button class="copy-btn" data-text="team test, full-TTA + T*,0.3038702441909425,81.1,51.11">📋</button></td></tr><tr><td>overseas test, no-TTA baseline</td><td>0.3040</td><td>90.16%</td><td>45.89%</td><td><button class="copy-btn" data-text="overseas test, no-TTA baseline,0.304,90.16,45.89">📋</button></td></tr><tr class="hit"><td>overseas test, no-TTA + T*</td><td>0.3034</td><td>87.37%</td><td>54.74%</td><td><button class="copy-btn" data-text="overseas test, no-TTA + T*,0.30338165298686953,87.37,54.74">📋</button></td></tr><tr class="hit"><td>overseas test, full-TTA baseline</td><td>0.3250</td><td>87.96%</td><td>57.16%</td><td><button class="copy-btn" data-text="overseas test, full-TTA baseline,0.325,87.96,57.16">📋</button></td></tr><tr class="hit"><td>overseas test, full-TTA + T*</td><td>0.3252</td><td>87.96%</td><td>59.37%</td><td><button class="copy-btn" data-text="overseas test, full-TTA + T*,0.3251941311184795,87.96,59.37">📋</button></td></tr><tr><td>COMBINED, full-TTA + T*</td><td></td><td>83.26%</td><td>53.01%</td><td><button class="copy-btn" data-text="COMBINED, full-TTA + T*,None,83.26,53.01">📋</button></td></tr></tbody></table></div>
+</details>
+<details class="exp" id="exp-v13" data-search="v13 — overseas-only same v8 recipe trained only on overseas turbine-split data. tests how the model performs on the overseas distribution when trained natively on it. overseas all-classes v13 done" data-id="v13" data-status="done" style="background:#fff3dc">
+<summary><span class="badge" style="background:#3d8b3d">DONE</span><span class="exp-name">v13 — overseas-only</span><span class="tag">overseas</span><span class="tag">all-classes</span><a class="anchor" href="#exp-v13" title="link">🔗</a></summary>
+<div class="section"><h4>Purpose</h4><p>Same v8 recipe trained only on overseas turbine-split data. Tests how the model performs on the overseas distribution when trained natively on it.</p></div>
+<div class="section"><h4>Training data</h4><table class="kv"><tr><th>source</th><td>overseas_only_train_merged.json</td></tr><tr><th>train_size</th><td>6559</td></tr><tr><th>val_size</th><td>867</td></tr><tr><th>test_size</th><td>720</td></tr><tr><th>test_set</th><td>overseas_only_test.json</td></tr><tr><th>labeler</th><td>overseas (lab + trained)</td></tr><tr><th>scope</th><td>all 8 defect classes (in practice mostly La_Exposure-heavy)</td></tr></table></div>
+<div class="section"><h4>Recipe</h4><table class="kv"><tr><th>loss</th><td>CWCE + Dice</td></tr><tr><th>backbone</th><td>SAM 3.1 LoRA r=8</td></tr><tr><th>iters</th><td>30,000 DDP-2</td></tr><tr><th>tiles</th><td>--n-bg=3</td></tr><tr><th>warm_start</th><td>v1 iter_30000.pth</td></tr></table></div>
+<div class="section"><h4>Results</h4><table class="results"><thead><tr><th>variant</th><th>mIoU</th><th>R</th><th>P</th><th>copy</th></tr></thead><tbody><tr class="hit"><td>no-TTA baseline</td><td>0.3810</td><td>92.51%</td><td>56.20%</td><td><button class="copy-btn" data-text="no-TTA baseline,0.381,92.51,56.2">📋</button></td></tr><tr class="hit"><td>no-TTA + T*</td><td>0.3801</td><td>90.60%</td><td>60.49%</td><td><button class="copy-btn" data-text="no-TTA + T*,0.3801361707008978,90.6,60.49">📋</button></td></tr><tr class="hit"><td>full-TTA baseline</td><td>0.3920</td><td>91.34%</td><td>65.47%</td><td><button class="copy-btn" data-text="full-TTA baseline,0.392,91.34,65.47">📋</button></td></tr><tr class="hit"><td>full-TTA + T*</td><td>0.3922</td><td>91.34%</td><td>66.31%</td><td><button class="copy-btn" data-text="full-TTA + T*,0.39217630746268306,91.34,66.31">📋</button></td></tr></tbody></table></div>
+<div class="section"><h4>Per-class (full-TTA + T*)</h4><table class="results"><thead><tr><th>class</th><th>TP</th><th>FP</th><th>FN</th><th>R</th><th>P</th><th>copy</th></tr></thead><tbody><tr><td>la_exposure</td><td>293</td><td>94</td><td>38</td><td>88.50%</td><td>75.70%</td><td><button class="copy-btn" data-text="la_exposure,293,94,38,88.5,75.7">📋</button></td></tr><tr><td>la_damage</td><td>0</td><td>34</td><td>0</td><td></td><td>0.00%</td><td><button class="copy-btn" data-text="la_damage,0,34,0,None,0.0">📋</button></td></tr><tr><td>la_crack</td><td>123</td><td>92</td><td>29</td><td>80.90%</td><td>57.20%</td><td><button class="copy-btn" data-text="la_crack,123,92,29,80.9,57.2">📋</button></td></tr><tr><td>la_open</td><td>0</td><td>0</td><td>0</td><td></td><td></td><td><button class="copy-btn" data-text="la_open,0,0,0,None,None">📋</button></td></tr><tr><td>bond_crack</td><td>90</td><td>71</td><td>50</td><td>64.30%</td><td>55.90%</td><td><button class="copy-btn" data-text="bond_crack,90,71,50,64.3,55.9">📋</button></td></tr><tr><td>bond_open</td><td>1</td><td>8</td><td>0</td><td>100</td><td>11.10%</td><td><button class="copy-btn" data-text="bond_open,1,8,0,100,11.1">📋</button></td></tr><tr><td>receptor_lightning</td><td>51</td><td>21</td><td>3</td><td>94.40%</td><td>70.80%</td><td><button class="copy-btn" data-text="receptor_lightning,51,21,3,94.4,70.8">📋</button></td></tr><tr><td>receptor_damage</td><td>0</td><td>29</td><td>3</td><td>0.00%</td><td>0.00%</td><td><button class="copy-btn" data-text="receptor_damage,0,29,3,0.0,0.0">📋</button></td></tr></tbody></table></div>
+</details>
+<details class="exp" id="exp-v12" data-search="v12 — team baseline (leak-free) leak-free team baseline. the team&#x27;s original train.json had 912 images that overlapped with val_diuid_7 and test_diuid_10. v12 trains on a deduplicated train_no_leak.json (9,564 imgs) and evaluates on the same team val/test as v8 for direct apples-to-apples comparison. team all-classes v12 done" data-id="v12" data-status="done" style="background:#ececec">
+<summary><span class="badge" style="background:#3d8b3d">DONE</span><span class="exp-name">v12 — team baseline (leak-free)</span><span class="tag">team</span><span class="tag">all-classes</span><a class="anchor" href="#exp-v12" title="link">🔗</a></summary>
+<div class="section"><h4>Purpose</h4><p>Leak-free team baseline. The team&#x27;s original train.json had 912 images that overlapped with val_diuid_7 and test_diuid_10. v12 trains on a deduplicated train_no_leak.json (9,564 imgs) and evaluates on the same team val/test as v8 for direct apples-to-apples comparison.</p></div>
+<div class="section"><h4>Training data</h4><table class="kv"><tr><th>source</th><td>team train_no_leak.json</td></tr><tr><th>train_size</th><td>9564</td></tr><tr><th>val_size</th><td>2124</td></tr><tr><th>test_size</th><td>3083</td></tr><tr><th>test_set</th><td>test_diuid_10.json</td></tr><tr><th>labeler</th><td>team</td></tr><tr><th>scope</th><td>all 8 defect classes</td></tr></table></div>
+<div class="section"><h4>Recipe</h4><table class="kv"><tr><th>loss</th><td>CWCE + Dice</td></tr><tr><th>backbone</th><td>SAM 3.1 LoRA r=8 (~9.4M trainable / 2.06%)</td></tr><tr><th>iters</th><td>30,000 DDP-2</td></tr><tr><th>tiles</th><td>--n-bg=3 (3 BG tiles per image)</td></tr><tr><th>warm_start</th><td>v1 iter_30000.pth</td></tr></table></div>
+<div class="section"><h4>Results</h4><table class="results"><thead><tr><th>variant</th><th>mIoU</th><th>R</th><th>P</th><th>copy</th></tr></thead><tbody><tr><td>no-TTA baseline</td><td>0.3310</td><td>88.89%</td><td>35.86%</td><td><button class="copy-btn" data-text="no-TTA baseline,0.331,88.89,35.86">📋</button></td></tr><tr><td>no-TTA + T*</td><td>0.3334</td><td>81.50%</td><td>44.82%</td><td><button class="copy-btn" data-text="no-TTA + T*,0.3334325714726244,81.5,44.82">📋</button></td></tr><tr><td>full-TTA baseline</td><td>0.3430</td><td>86.92%</td><td>44.58%</td><td><button class="copy-btn" data-text="full-TTA baseline,0.343,86.92,44.58">📋</button></td></tr><tr><td>full-TTA + T*</td><td>0.3462</td><td>83.06%</td><td>51.69%</td><td><button class="copy-btn" data-text="full-TTA + T*,0.3461764162816404,83.06,51.69">📋</button></td></tr></tbody></table></div>
+<div class="section"><h4>Per-class (full-TTA + T*)</h4><table class="results"><thead><tr><th>class</th><th>TP</th><th>FP</th><th>FN</th><th>R</th><th>P</th><th>copy</th></tr></thead><tbody><tr><td>la_exposure</td><td>859</td><td>590</td><td>59</td><td>93.60%</td><td>59.30%</td><td><button class="copy-btn" data-text="la_exposure,859,590,59,93.6,59.3">📋</button></td></tr><tr><td>la_damage</td><td>117</td><td>37</td><td>8</td><td>93.60%</td><td>76.00%</td><td><button class="copy-btn" data-text="la_damage,117,37,8,93.6,76.0">📋</button></td></tr><tr><td>la_crack</td><td>15</td><td>6</td><td>57</td><td>20.80%</td><td>71.40%</td><td><button class="copy-btn" data-text="la_crack,15,6,57,20.8,71.4">📋</button></td></tr><tr><td>la_open</td><td>0</td><td>0</td><td>0</td><td></td><td></td><td><button class="copy-btn" data-text="la_open,0,0,0,None,None">📋</button></td></tr><tr><td>bond_crack</td><td>22</td><td>8</td><td>50</td><td>30.60%</td><td>73.30%</td><td><button class="copy-btn" data-text="bond_crack,22,8,50,30.6,73.3">📋</button></td></tr><tr><td>bond_open</td><td>6</td><td>90</td><td>6</td><td>50.00%</td><td>6.20%</td><td><button class="copy-btn" data-text="bond_open,6,90,6,50.0,6.2">📋</button></td></tr><tr><td>receptor_lightning</td><td>68</td><td>54</td><td>45</td><td>60.20%</td><td>55.70%</td><td><button class="copy-btn" data-text="receptor_lightning,68,54,45,60.2,55.7">📋</button></td></tr><tr><td>receptor_damage</td><td>83</td><td>40</td><td>81</td><td>50.60%</td><td>67.50%</td><td><button class="copy-btn" data-text="receptor_damage,83,40,81,50.6,67.5">📋</button></td></tr></tbody></table></div>
+</details>
+<h2 id="comparisons" class="section-anchor">🔁 Cross-comparisons</h2>
+<details class="exp" id="cmp-v15_vs_v17" data-search="v15 vs v17 — bg-tile ablation (--n-bg=3 vs 6) hold everything constant except bg-tile sampling rate. tests whether 2× clean-blade exposure during training reduces fps. doubling bg-tile exposure consistently improves precision by 4-8 pp at every operating point on both domains, at the cost of 1-5 pp recall. miou also improves by ~3 pp on baselines. confirms the fp-on-featureless-blade-edges failure mode is partly a training-coverage problem.">
+<summary><span class="exp-name">v15 vs v17 — BG-tile ablation (--n-bg=3 vs 6)</span><a class="anchor" href="#cmp-v15_vs_v17">🔗</a></summary>
+<div class="section"><h4>Purpose</h4><p>Hold everything constant except BG-tile sampling rate. Tests whether 2× clean-blade exposure during training reduces FPs.</p></div>
+<div class="section"><h4>Table</h4><table class="results"><thead><tr><th>test_set</th><th>variant</th><th>v15_R</th><th>v15_P</th><th>v17_R</th><th>v17_P</th><th>delta_P</th><th>copy</th></tr></thead><tbody><tr><td>team test</td><td>no-TTA baseline</td><td>87.06%</td><td>33.33%</td><td>85.70%</td><td>39.88%</td><td>+6.55</td><td><button class="copy-btn" data-text="team test,no-TTA baseline,87.06,33.33,85.7,39.88,+6.55">📋</button></td></tr><tr><td>team test</td><td>no-TTA + T*</td><td>80.89%</td><td>44.54%</td><td>80.42%</td><td>52.08%</td><td>+7.54</td><td><button class="copy-btn" data-text="team test,no-TTA + T*,80.89,44.54,80.42,52.08,+7.54">📋</button></td></tr><tr><td>overseas test</td><td>no-TTA baseline</td><td>90.16%</td><td>45.89%</td><td>84.88%</td><td>54.17%</td><td>+8.28</td><td><button class="copy-btn" data-text="overseas test,no-TTA baseline,90.16,45.89,84.88,54.17,+8.28">📋</button></td></tr><tr><td>overseas test</td><td>no-TTA + T*</td><td>87.37%</td><td>54.74%</td><td>84.58%</td><td>59.26%</td><td>+4.52</td><td><button class="copy-btn" data-text="overseas test,no-TTA + T*,87.37,54.74,84.58,59.26,+4.52">📋</button></td></tr></tbody></table></div>
+<div class="section"><h4>Take-away</h4><p>Doubling BG-tile exposure consistently improves precision by 4-8 pp at every operating point on both domains, at the cost of 1-5 pp recall. mIoU also improves by ~3 pp on baselines. Confirms the FP-on-featureless-blade-edges failure mode is partly a training-coverage problem.</p></div>
+</details>
+<details class="exp" id="cmp-v16_vs_v19" data-search="v16 vs v19 — apples-to-apples labeler effect both trained crack-only at same recipe. v16 = overseas lab labelers (2,993 train), v19 = team labelers (531 train). differs in who labeled and data size (5.6×). per-class precision is nearly identical (v19 la_crack 70.7 p vs v16 73.1 p; v19 bond_crack 66.7 p vs v16 71.9 p). the 14 pp recall gap is almost entirely explained by training-data size (5.6×), not labeler style. v23 (queued, size-matched) will confirm.">
+<summary><span class="exp-name">v16 vs v19 — apples-to-apples labeler effect</span><a class="anchor" href="#cmp-v16_vs_v19">🔗</a></summary>
+<div class="section"><h4>Purpose</h4><p>Both trained Crack-only at same recipe. v16 = overseas lab labelers (2,993 train), v19 = team labelers (531 train). Differs in WHO labeled AND data size (5.6×).</p></div>
+<div class="section"><h4>Table</h4><table class="results"><thead><tr><th>model</th><th>no-TTA + T* R/P</th><th>mIoU</th><th>copy</th></tr></thead><tbody><tr><td>v16 (lab, 2,993)</td><td>92.47 / 72.58</td><td>0.5810</td><td><button class="copy-btn" data-text="v16 (lab, 2,993),92.47 / 72.58,0.581">📋</button></td></tr><tr><td>v19 (team, 531)</td><td>78.33 / 69.12</td><td>0.5280</td><td><button class="copy-btn" data-text="v19 (team, 531),78.33 / 69.12,0.528">📋</button></td></tr><tr><td>gap</td><td>−14.1 R / −3.5 P</td><td>−0.053</td><td><button class="copy-btn" data-text="gap,−14.1 R / −3.5 P,−0.053">📋</button></td></tr></tbody></table></div>
+<div class="section"><h4>Take-away</h4><p>Per-class precision is nearly identical (v19 La_Crack 70.7 P vs v16 73.1 P; v19 Bond_Crack 66.7 P vs v16 71.9 P). The 14 pp recall gap is almost entirely explained by training-data SIZE (5.6×), NOT labeler style. v23 (queued, size-matched) will confirm.</p></div>
+</details>
+<details class="exp" id="cmp-v17_vs_v20" data-search="v17 vs v20 — aux classification head effect v20 = v17 + tile-level binary aux classification head, jointly trained. tests whether multi-task aux loss improves segmentation as a regularizer. v20 has v17&#x27;s precision-leaning seg-head behavior but with v15&#x27;s recall — best of both. aux loss acted as regularizer; aux head itself not yet used at inference (mode a/b inference pending).">
+<summary><span class="exp-name">v17 vs v20 — aux classification head effect</span><a class="anchor" href="#cmp-v17_vs_v20">🔗</a></summary>
+<div class="section"><h4>Purpose</h4><p>v20 = v17 + tile-level binary aux classification head, jointly trained. Tests whether multi-task aux loss improves segmentation as a regularizer.</p></div>
+<div class="section"><h4>Table</h4><table class="results"><thead><tr><th>variant</th><th>v17_R_P</th><th>v20_R_P</th><th>delta</th><th>copy</th></tr></thead><tbody><tr><td>team test, no-TTA + T*</td><td>80.42 / 52.08</td><td>83.74 / 48.47</td><td>+3.3 R, −3.6 P</td><td><button class="copy-btn" data-text="team test, no-TTA + T*,80.42 / 52.08,83.74 / 48.47,+3.3 R, −3.6 P">📋</button></td></tr><tr><td>overseas test, no-TTA + T*</td><td>84.58 / 59.26</td><td>87.37 / 59.80</td><td>+2.8 R, +0.5 P</td><td><button class="copy-btn" data-text="overseas test, no-TTA + T*,84.58 / 59.26,87.37 / 59.80,+2.8 R, +0.5 P">📋</button></td></tr><tr><td>combined, no-TTA + T*</td><td>81.73 / 53.65</td><td>84.89 / 50.69</td><td>+3.2 R, −3.0 P</td><td><button class="copy-btn" data-text="combined, no-TTA + T*,81.73 / 53.65,84.89 / 50.69,+3.2 R, −3.0 P">📋</button></td></tr></tbody></table></div>
+<div class="section"><h4>Take-away</h4><p>v20 has v17&#x27;s precision-leaning seg-head behavior but with v15&#x27;s recall — best of both. Aux loss acted as regularizer; aux head itself NOT yet used at inference (Mode A/B inference pending).</p></div>
+</details>
+<details class="exp" id="cmp-v13_cross" data-search="v13 cross-domain — overseas model on team test apply v13 (overseas-trained) ckpt to team test_diuid_10. quantifies domain transfer gap. v13 was 91 r / 66 p on its own overseas test. on team test it drops to 62.5 r / 64.5 p with full-tta + t*. a 28.5 pp recall drop on the same model — strong evidence the team and overseas distributions are structurally different.">
+<summary><span class="exp-name">v13 cross-domain — overseas model on team test</span><a class="anchor" href="#cmp-v13_cross">🔗</a></summary>
+<div class="section"><h4>Purpose</h4><p>Apply v13 (overseas-trained) ckpt to team test_diuid_10. Quantifies domain transfer gap.</p></div>
+<div class="section"><h4>Table</h4><table class="results"><thead><tr><th>variant</th><th>R</th><th>P</th><th>mIoU</th><th>copy</th></tr></thead><tbody><tr><td>no-TTA baseline</td><td>70.33%</td><td>28.89%</td><td>0.2040</td><td><button class="copy-btn" data-text="no-TTA baseline,70.33,28.89,0.204">📋</button></td></tr><tr><td>no-TTA + T*</td><td>64.30%</td><td>56.76%</td><td></td><td><button class="copy-btn" data-text="no-TTA + T*,64.3,56.76,None">📋</button></td></tr><tr><td>full-TTA baseline</td><td>67.68%</td><td>36.39%</td><td>0.2070</td><td><button class="copy-btn" data-text="full-TTA baseline,67.68,36.39,0.207">📋</button></td></tr><tr><td>full-TTA + T*</td><td>62.47%</td><td>64.52%</td><td></td><td><button class="copy-btn" data-text="full-TTA + T*,62.47,64.52,None">📋</button></td></tr></tbody></table></div>
+<div class="section"><h4>Take-away</h4><p>v13 was 91 R / 66 P on its own overseas test. On team test it drops to 62.5 R / 64.5 P with full-TTA + T*. A 28.5 pp recall drop on the same model — strong evidence the team and overseas distributions are structurally different.</p></div>
+</details>
+<h2 id="analyses" class="section-anchor">📈 Data analyses</h2>
+<details class="exp" id="an-train_test_drift" data-search="team train ≠ team test distribution critical mismatch: team train_no_leak is 98% defect-positive, avg 6.81 instances/img, 1.20 classes/img. team test_diuid_10 is 38% defect-positive (62% empty), avg 2.33 instances/img, 0.48 classes/img. model trained on defect-heavy data is biased to fire on edge texture — root cause of low team-test precision.">
+<summary><span class="exp-name">Team train ≠ team test distribution</span><a class="anchor" href="#an-train_test_drift">🔗</a></summary>
+<div class="section"><p>Critical mismatch: team train_no_leak is 98% defect-positive, avg 6.81 instances/img, 1.20 classes/img. Team test_diuid_10 is 38% defect-positive (62% empty), avg 2.33 instances/img, 0.48 classes/img. Model trained on defect-heavy data is biased to fire on edge texture — root cause of low team-test precision.</p></div>
+<div class="section"><table class="results"><thead><tr><th>split</th><th>pct_empty</th><th>avg_inst_per_img</th><th>avg_classes_per_img</th><th>imgs_per_WTG</th><th>copy</th></tr></thead><tbody><tr><td>team train</td><td>2.0%</td><td>6.81%</td><td>1.20%</td><td>38.10%</td><td><button class="copy-btn" data-text="team train,2.0%,6.81,1.2,38.1">📋</button></td></tr><tr><td>team val</td><td>58.7%</td><td>2.68%</td><td>0.52%</td><td>303</td><td><button class="copy-btn" data-text="team val,58.7%,2.68,0.52,303">📋</button></td></tr><tr><td>team test</td><td>62.0%</td><td>2.33%</td><td>0.48%</td><td>308</td><td><button class="copy-btn" data-text="team test,62.0%,2.33,0.48,308">📋</button></td></tr></tbody></table></div>
+</details>
+<details class="exp" id="an-overseas_no_drift" data-search="overseas — no train/test drift overseas train, val, test are statistically interchangeable — same empty rate (~6%), same instance count (~4-5/img), same classes/img (~0.94). fair eval.">
+<summary><span class="exp-name">Overseas — no train/test drift</span><a class="anchor" href="#an-overseas_no_drift">🔗</a></summary>
+<div class="section"><p>Overseas train, val, test are statistically interchangeable — same empty rate (~6%), same instance count (~4-5/img), same classes/img (~0.94). Fair eval.</p></div>
+<div class="section"><table class="results"><thead><tr><th>split</th><th>pct_empty</th><th>avg_inst_per_img</th><th>avg_classes_per_img</th><th>imgs_per_WTG</th><th>copy</th></tr></thead><tbody><tr><td>overseas train</td><td>6.0%</td><td>5.02%</td><td>0.94%</td><td>6.50%</td><td><button class="copy-btn" data-text="overseas train,6.0%,5.02,0.94,6.5">📋</button></td></tr><tr><td>overseas val</td><td>8.2%</td><td>4.47%</td><td>0.93%</td><td>7.90%</td><td><button class="copy-btn" data-text="overseas val,8.2%,4.47,0.93,7.9">📋</button></td></tr><tr><td>overseas test</td><td>5.8%</td><td>3.86%</td><td>0.95%</td><td>6.60%</td><td><button class="copy-btn" data-text="overseas test,5.8%,3.86,0.95,6.6">📋</button></td></tr></tbody></table></div>
+</details>
+<details class="exp" id="an-multi_label" data-search="multi-label rates by dataset team data has many multi-class panoramas (20% in train). overseas is almost mono-class (94% single-class) because each image came from a task-specific labeling queue.">
+<summary><span class="exp-name">Multi-label rates by dataset</span><a class="anchor" href="#an-multi_label">🔗</a></summary>
+<div class="section"><p>Team data has many multi-class panoramas (20% in train). Overseas is almost mono-class (94% single-class) because each image came from a task-specific labeling queue.</p></div>
+<div class="section"><table class="results"><thead><tr><th>split</th><th>multi_class_pct</th><th>top_combo</th><th>copy</th></tr></thead><tbody><tr><td>team train</td><td>19.7%</td><td>la_exposure + la_damage</td><td><button class="copy-btn" data-text="team train,19.7%,la_exposure + la_damage">📋</button></td></tr><tr><td>team test</td><td>8.0%</td><td>la_exposure + la_damage</td><td><button class="copy-btn" data-text="team test,8.0%,la_exposure + la_damage">📋</button></td></tr><tr><td>overseas test</td><td>0.4%</td><td>receptor_damage + receptor_lightning</td><td><button class="copy-btn" data-text="overseas test,0.4%,receptor_damage + receptor_lightning">📋</button></td></tr></tbody></table></div>
+</details>
+<details class="exp" id="an-receptor_damage_source" data-search="receptor_damage source in overseas receptor_damage class (id=8) is never a primary overseas task. it appears only as a secondary annotation in the &#x27;3_receptor_lightning&#x27; task — labelers annotated both the lightning marks and the underlying damage to the receptor. 88% of receptor_lightning task images also have receptor_damage annotations.">
+<summary><span class="exp-name">Receptor_Damage source in overseas</span><a class="anchor" href="#an-receptor_damage_source">🔗</a></summary>
+<div class="section"><p>Receptor_Damage class (id=8) is NEVER a primary overseas task. It appears only as a secondary annotation in the &#x27;3_Receptor_Lightning&#x27; task — labelers annotated both the lightning marks AND the underlying damage to the receptor. 88% of Receptor_Lightning task images also have Receptor_Damage annotations.</p></div>
+</details>
+<details class="exp" id="an-class_mapping" data-search="class id mapping is consistent between team and overseas both datasets use the same canonical mapping (from windblade_tiled.py metainfo): 0=bg, 1=la_exposure, 2=la_damage, 3=la_crack, 4=la_open, 5=bond_crack, 6=bond_open, 7=receptor_lightning, 8=receptor_damage. verified via overseas task names → mask class ids (all match expected).">
+<summary><span class="exp-name">Class ID mapping is consistent between team and overseas</span><a class="anchor" href="#an-class_mapping">🔗</a></summary>
+<div class="section"><p>Both datasets use the same canonical mapping (from windblade_tiled.py METAINFO): 0=BG, 1=la_exposure, 2=la_damage, 3=la_crack, 4=la_open, 5=bond_crack, 6=bond_open, 7=receptor_lightning, 8=receptor_damage. Verified via overseas task names → mask class IDs (all match expected).</p></div>
+</details>
+
+<footer>Generated by generate_dashboard.py · SVG charts, no JavaScript required.</footer>
+</main>
+</body></html>

@@ -1,5 +1,10 @@
 # Wind-blade defect detection — experiments
 
+> 📊 **Live experiments dashboard** → see [`dashboard/`](./dashboard/) (open
+> [`dashboard/dmdd_dashboard.html`](./dashboard/dmdd_dashboard.html) for the
+> rendered version with bullseye target, per-domain bar charts, Pareto scatter,
+> leaderboard, and per-experiment cards).
+
 ## Project context
 
 - **Goal**: wind-turbine blade defect semantic segmentation. Customer team's
